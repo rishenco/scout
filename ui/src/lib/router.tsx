@@ -6,7 +6,7 @@ import EditProfile from '@/pages/EditProfile'
 
 function RootLayout() {
   return (
-    <div className="min-h-screen bg-background mx-auto max-w-7xl py-8">
+    <div className="min-h-screen bg-background mx-auto max-w-7xl py-8 justify-center flex">
       <Outlet />
     </div>
   )
