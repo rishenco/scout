@@ -1,4 +1,4 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 
 type ExtractedPropertiesProps = {
   properties: Record<string, string>
@@ -16,15 +16,14 @@ export function ExtractedProperties({ properties, className }: ExtractedProperti
 
   return (
     <Card className={className}>
-      <CardHeader>
-        <CardTitle className="text-lg">Extracted Properties</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-2">
+      <CardContent className="py-2">
+        <div className="space-y-0.5">
           {Object.entries(properties).map(([key, value]) => (
-            <div key={key} className="border-b pb-2 last:border-0">
-              <h3 className="font-medium text-sm">{key}</h3>
-              <p className="text-sm text-muted-foreground whitespace-pre-wrap">{value}</p>
+            <div key={key} className="border-b pb-0.5 last:border-0">
+              <div className="flex gap-2">
+                <h3 className="font-medium text-sm">{key}:</h3>
+                <h2 className="text-sm text-muted-foreground whitespace-pre-wrap">{value}</h2>
+              </div>
             </div>
           ))}
         </div>
