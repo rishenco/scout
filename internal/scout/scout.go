@@ -67,16 +67,16 @@ func (s *Scout[PostType]) Analyze(ctx context.Context, post PostType, profile mo
 		return models.Detection{}, fmt.Errorf("analysis failed for profile '%s': %w", profile.Name, err)
 	}
 
-	// Save detection to database
-	record := models.DetectionRecord{
-		Source:     s.source,
-		PostID:     post.ID(),
-		ProfileID:  profile.ID,
-		IsRelevant: detection.IsRelevant,
-		Properties: detection.Properties,
-	}
-
 	if shouldSave {
+		// Save detection to database
+		record := models.DetectionRecord{
+			Source:     s.source,
+			PostID:     post.ID(),
+			ProfileID:  profile.ID,
+			IsRelevant: detection.IsRelevant,
+			Properties: detection.Properties,
+		}
+
 		if err := s.storage.SaveDetection(ctx, record); err != nil {
 			logger.Error().Err(err).Msg("failed to save post")
 
@@ -84,7 +84,7 @@ func (s *Scout[PostType]) Analyze(ctx context.Context, post PostType, profile mo
 		}
 	}
 
-	logger.Info().Msg("post analyzed")
+	logger.Info().Msgf("post %s analyzed", post.ID())
 
 	return detection, nil
 }

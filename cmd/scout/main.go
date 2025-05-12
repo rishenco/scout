@@ -129,7 +129,7 @@ func main() {
 		componentLogger(logger, "reddit_scheduler"),
 	)
 
-	redditTaskProcessor := scout.NewTaskProcessor(
+	redditTaskProcessor := scout.NewTaskProcessor[reddit.PostAndComments](
 		taskStorage,
 		redditScout,
 		models.RedditSource,
