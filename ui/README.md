@@ -51,11 +51,10 @@ Read openapi.yaml for details. It contains api description with comments and exa
 
 ### Profile Feed page:
 
-- PostFeed - List of posts with filters
+- PostFeed - List of posts with filters, infinitely scrolls
     - FeedFilters
     - PostCard - shows post in reddit style. Does not show comments
         - PostReaction - allows to like/dislike relevancy of the post
-    - FeedPagination
 
 ### Edit Profile page:
 

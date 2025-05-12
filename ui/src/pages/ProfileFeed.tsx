@@ -1,22 +1,43 @@
 import { useParams, Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Settings } from 'lucide-react'
+import { PostFeed } from '@/components/PostFeed'
+import { useProfile } from '@/api/hooks'
 
 export default function ProfileFeed() {
-  const { profileId } = useParams()
+  const { profileId } = useParams<{ profileId: string }>()
+  const { data: profile } = useProfile(profileId || '')
+
+  if (!profileId) {
+    return <div>Profile ID not found!</div>
+  }
 
   return (
-    <div className="container py-8 max-w-7xl">
-      <div className="flex items-center gap-4 mb-8">
-        <Button asChild variant="outline" size="icon">
-          <Link to="/">
-            <ArrowLeft className="h-4 w-4" />
+    <div className="container py-8 max-w-4xl">
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center gap-4">
+          <Button asChild variant="outline" size="icon">
+            <Link to="/">
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
+          </Button>
+          <h1 className="text-3xl font-bold">{profile?.name || 'Loading...'}</h1>
+        </div>
+        <Button asChild variant="outline">
+          <Link to={`/profiles/${profileId}/edit`}>
+            <Settings className="h-4 w-4 mr-2" />
+            Edit Profile
           </Link>
         </Button>
-        <h1 className="text-3xl font-bold">Profile Feed</h1>
       </div>
-      <p className="text-muted-foreground">Viewing feed for profile: {profileId}</p>
-      <p className="mt-4">This page will be implemented later.</p>
+      
+      {profile && (
+        <div className="mb-4">
+          <p className="text-muted-foreground">Subreddits: {profile.subreddits.join(', ')}</p>
+        </div>
+      )}
+      
+      <PostFeed profileId={profileId} />
     </div>
   )
 } 

@@ -21,7 +21,7 @@ This document outlines the development plan for Scout, a Reddit post filtering a
 ### Step 3: Base UI Components
 - Implement common components:
   - ExtractedProperties viewer
-  - Import other base ui elements that will surely be needed later from shadcn
+  - Import other base ui elements from shadcn
   - Enable dark/light theme support based on browser settings (no need for switch in ui)
   - Add them to App.tsx to verify changes (can be removed after this stage)
 
@@ -41,28 +41,39 @@ This document outlines the development plan for Scout, a Reddit post filtering a
 ## Stage 3: Post Feed Viewing
 
 ### Step 1: Post Feed
-- Implement PostFeed component with pagination
+- Implement PostFeed component with infinite scroll
 - Create FeedFilters for filtering by relevance
-- Build PostCard component to display Reddit-style posts
+- Create placeholder PostCard, it should not display any data yet
 
-### Step 2: User Classification
+### Step 2: Post Card
+- Build PostCard component to display Reddit-style posts
+- Make post card compact - do not show full content
+
+### Step 3: Relevancy Feedback
 - Add PostReaction component for user relevance feedback
 - Implement API calls to store user classifications
 - Create visual feedback for user classifications
 
-## Stage 4: Profile Testing and Refinement
+### Step 4: Post Page Dialog
+- Create dialog that shows full post
+- Make post card clickable to open dialog
+- Show post in full view without content truncation
+- Move extracted properties above description in the card
 
-### Step 1: Test Runner Interface
-- Implement TestRunner component
-- Create TestStats component for displaying test results
-- Build TestPostList for showing labeled posts
+## Stage 4: Profile Editing & Test Running
 
-### Step 2: Profile Editing
+### Step 1: Profile Editing
 - Enhance ProfileEditor for editing existing profiles
+- Add it to Profile editing page
 
-### Step 3: Test Results Visualization
+### Step 2: List of labeled posts
+- Build TestPostList for showing labeled posts
 - Create TestPostCard with expected vs. actual results
 - Implement highlighting for failed tests
+
+### Step 3: Test Runner
+- Implement TestRunner component
+- Create TestStats component for displaying test results
 
 ## Stage 5: Advanced Features and Refinements
 
