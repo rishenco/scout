@@ -1,0 +1,444 @@
+openapi: 3.0.0
+info:
+  title: Scout API
+  version: 1.0.0
+  description: >
+    API for Scout
+servers:
+  - url: http://localhost:5601
+paths:
+  /profiles:
+    get:
+      summary: List all profiles
+      responses:
+        '200':
+          description: A list of profiles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Profile'
+    post:
+      summary: Create a new profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfileInput'
+      responses:
+        '201':
+          description: The created profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+  /profiles/{profileId}:
+    parameters:
+      - name: profileId
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      summary: Retrieve a profile by ID
+      responses:
+        '200':
+          description: Profile found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+        '404':
+          description: Profile not found
+    put:
+      summary: Replace an entire profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfileInput'
+      responses:
+        '200':
+          description: The updated profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+    delete:
+      summary: Delete a profile
+      responses:
+        '204':
+          description: Profile deleted
+  /detections:
+    get:
+      summary: List detections (with embedded posts)
+      parameters:
+        - name: profile_id
+          in: query
+          schema:
+            type: integer
+        - name: is_relevant
+          in: query
+          schema:
+            type: boolean
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: A list of detections, each including its post
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DetectionWithPost'
+  /user_classifications:
+    get:
+      summary: List user classifications
+      parameters:
+        - name: profile_id
+          in: query
+          schema:
+            type: integer
+        - name: post_id
+          in: query
+          schema:
+            type: integer
+        - name: is_relevant
+          in: query
+          schema:
+            type: boolean
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: A list of user classifications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserClassification'
+    post:
+      summary: Create a new user classification
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewUserClassification'
+      responses:
+        '201':
+          description: The created classification
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserClassification'
+  /user_classifications/{profileId}/{postId}:
+    parameters:
+      - name: profileId
+        in: path
+        required: true
+        schema:
+          type: integer
+      - name: postId
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      summary: Retrieve a specific user classification
+      responses:
+        '200':
+          description: Classification found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserClassification'
+        '404':
+          description: Classification not found
+    put:
+      summary: Replace a user classification
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewUserClassification'
+      responses:
+        '200':
+          description: The updated classification
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserClassification'
+    patch:
+      summary: Partially update a user classification
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewUserClassification'
+      responses:
+        '200':
+          description: The updated classification
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserClassification'
+    delete:
+      summary: Delete a user classification
+      responses:
+        '204':
+          description: Classification deleted
+  /posts:
+    get:
+      summary: List posts
+      parameters:
+        - name: ids
+          in: query
+          description: Comma-separated post IDs to filter by
+          schema:
+            type: string
+            example: "1,2,3"
+      responses:
+        '200':
+          description: A list of raw posts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Post'
+  /analyze_posts:
+    post:
+      summary: Preview detections for a modified profile against given post IDs
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnalyzePostsRequest'
+      responses:
+        '200':
+          description: Generated detections and any errors
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyzePostsResponse'
+
+components:
+  schemas:
+    Profile:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        subreddits:
+          type: array
+          items:
+            type: string
+        relevancy_filter_prompt:
+          type: string
+        properties_prompts:
+          type: object
+          additionalProperties:
+            type: string
+      required:
+        - id
+        - name
+        - subreddits
+        - relevancy_filter_prompt
+        - properties_prompts
+
+    ProfileInput:
+      type: object
+      properties:
+        name:
+          type: string
+        subreddits:
+          type: array
+          items:
+            type: string
+        relevancy_filter_prompt:
+          type: string
+        properties_prompts:
+          type: object
+          additionalProperties:
+            type: string
+      required:
+        - name
+        - subreddits
+        - relevancy_filter_prompt
+        - properties_prompts
+
+    PostReddit:
+      type: object
+      properties:
+        permalink:
+          type: string
+        score:
+          type: integer
+        num_comments:
+          type: integer
+        subreddit:
+          type: string
+        comments:
+          type: array
+          items:
+            type: object
+      required:
+        - permalink
+        - score
+        - num_comments
+        - subreddit
+        - comments
+
+    Post:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        content:
+          type: string
+        reddit:
+          $ref: '#/components/schemas/PostReddit'
+      required:
+        - id
+        - title
+        - content
+        - reddit
+
+    Detection:
+      type: object
+      properties:
+        id:
+          type: integer
+        profile_id:
+          type: integer
+        post_id:
+          type: integer
+        is_relevant:
+          type: boolean
+        extracted_properties:
+          type: object
+          additionalProperties:
+            type: string
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - profile_id
+        - post_id
+        - is_relevant
+        - extracted_properties
+        - created_at
+
+    DetectionWithPost:
+      allOf:
+        - $ref: '#/components/schemas/Detection'
+        - type: object
+          properties:
+            post:
+              $ref: '#/components/schemas/Post'
+          required:
+            - post
+
+    NewUserClassification:
+      type: object
+      properties:
+        profile_id:
+          type: integer
+        post_id:
+          type: integer
+        is_relevant:
+          type: boolean
+      required:
+        - profile_id
+        - post_id
+        - is_relevant
+
+    UserClassification:
+      allOf:
+        - $ref: '#/components/schemas/NewUserClassification'
+        - type: object
+          properties:
+            created_at:
+              type: string
+              format: date-time
+          required:
+            - created_at
+
+    AnalyzePostsRequest:
+      type: object
+      properties:
+        profile:
+          $ref: '#/components/schemas/ProfileInput'
+        post_ids:
+          type: array
+          items:
+            type: integer
+      required:
+        - profile
+        - post_ids
+
+    AnalyzePostsResponse:
+      type: object
+      properties:
+        detections:
+          type: array
+          items:
+            type: object
+            properties:
+              post_id:
+                type: integer
+              is_relevant:
+                type: boolean
+              extracted_properties:
+                type: object
+                additionalProperties:
+                  type: string
+            required:
+              - post_id
+              - is_relevant
+              - extracted_properties
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              post_id:
+                type: integer
+              error:
+                type: string
+            required:
+              - post_id
+              - error
+      required:
+        - detections
+        - errors
