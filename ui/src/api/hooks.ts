@@ -1,14 +1,13 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
+import type { InfiniteData } from '@tanstack/react-query';
 import type {
   ProfileSettings,
   Profile,
-  NewUserClassification,
   UserClassification,
   AnalyzePostsRequest,
   AnalyzePostsResponse,
-  DetectionWithPost,
-  UserClassificationWithPost,
-  Post,
+  FeedPost,
+  FeedFilters
 } from './models';
 import {
   getProfiles,
@@ -16,13 +15,9 @@ import {
   createProfile,
   updateProfile,
   deleteProfile,
-  getDetections,
-  getUserClassifications,
-  createUserClassification,
-  getUserClassification,
+  getFeed,
   updateUserClassification,
-  deleteUserClassification,
-  getPosts,
+  getUserClassification,
   analyzePosts,
 } from './services';
 
@@ -46,15 +41,21 @@ export function useCreateProfile() {
   const queryClient = useQueryClient();
   return useMutation<Profile, Error, ProfileSettings>({
     mutationFn: createProfile,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['profiles'] }),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['profiles'] });
+      queryClient.setQueryData(['profiles', data.id], data);
+    },
   });
 }
 
 export function useUpdateProfile() {
   const queryClient = useQueryClient();
-  return useMutation<Profile, Error, { id: string; settings: ProfileSettings }, string[]>({
+  return useMutation<Profile, Error, { id: string; settings: ProfileSettings }>({
     mutationFn: ({ id, settings }) => updateProfile(id, settings),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['profiles'] }),
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['profiles'] });
+      queryClient.setQueryData(['profiles', variables.id], data);
+    },
   });
 }
 
@@ -62,42 +63,54 @@ export function useDeleteProfile() {
   const queryClient = useQueryClient();
   return useMutation<void, Error, string>({
     mutationFn: deleteProfile,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['profiles'] }),
+    onSuccess: (_, profileId) => {
+      queryClient.invalidateQueries({ queryKey: ['profiles'] });
+      queryClient.removeQueries({ queryKey: ['profiles', profileId] });
+    },
   });
 }
 
-// Detections
-export function useDetections(params: {
+const FEED_PAGE_SIZE = 10;
+
+export function useFeed(params: {
   profile_id: string;
-  is_relevant?: boolean;
-  limit?: number;
-  offset?: number;
-}) {
-  return useQuery<DetectionWithPost[], Error, DetectionWithPost[]>({
-    queryKey: ['detections', params],
-    queryFn: () => getDetections(params),
-  });
-}
-
-// User Classifications
-export function useUserClassifications(params: {
-  profile_id?: string;
-  post_id?: string;
-  is_relevant?: boolean;
-  limit?: number;
-  offset?: number;
-}) {
-  return useQuery<UserClassificationWithPost[], Error, UserClassificationWithPost[]>({
-    queryKey: ['user_classifications', params],
-    queryFn: () => getUserClassifications(params),
+  filters?: FeedFilters;
+  order?: 'new' | 'max_score' | 'relevant';
+}, options?: { enabled?: boolean }) {
+  return useInfiniteQuery<FeedPost[], Error, InfiniteData<FeedPost[]>, [string, typeof params], number>({
+    queryKey: ['feed', params],
+    queryFn: ({ pageParam = 0 }) => getFeed({ ...params, offset: pageParam * FEED_PAGE_SIZE, limit: FEED_PAGE_SIZE }),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, allPages, lastPageParam) => {
+      if (lastPage.length < FEED_PAGE_SIZE) {
+        return undefined;
+      }
+      return lastPageParam + 1;
+    },
+    enabled: options?.enabled ?? true,
   });
 }
 
 export function useCreateUserClassification() {
   const queryClient = useQueryClient();
-  return useMutation<UserClassification, Error, NewUserClassification>({
-    mutationFn: createUserClassification,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['user_classifications'] }),
+  return useMutation<UserClassification, Error, UserClassification>({
+    mutationFn: updateUserClassification,
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['feed', { profile_id: data.profile_id }] });
+      queryClient.setQueryData(['user_classification', data.profile_id, data.post_id], data);
+      queryClient.setQueryData<InfiniteData<FeedPost[]>>(['feed', { profile_id: data.profile_id }], (oldData) => {
+        if (!oldData) return oldData;
+        return {
+          ...oldData,
+          pages: oldData.pages.map(page => page.map(feedPost => {
+            if (feedPost.post.id === data.post_id) {
+              return { ...feedPost, user_classification: data };
+            }
+            return feedPost;
+          }))
+        };
+      });
+    },
   });
 }
 
@@ -106,31 +119,6 @@ export function useUserClassification(profileId: string, postId: string) {
     queryKey: ['user_classification', profileId, postId],
     queryFn: () => getUserClassification(profileId, postId),
     enabled: !!profileId && !!postId,
-  });
-}
-
-export function useUpdateUserClassification() {
-  const queryClient = useQueryClient();
-  return useMutation<UserClassification, Error, { profileId: string; postId: string; data: NewUserClassification }>({
-    mutationFn: ({ profileId, postId, data }) => updateUserClassification(profileId, postId, data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['user_classifications'] }),
-  });
-}
-
-export function useDeleteUserClassification() {
-  const queryClient = useQueryClient();
-  return useMutation<void, Error, { profileId: string; postId: string }>({
-    mutationFn: ({ profileId, postId }) => deleteUserClassification(profileId, postId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['user_classifications'] }),
-  });
-}
-
-// Posts
-export function usePosts(ids?: string[]) {
-  return useQuery<Post[], Error, Post[]>({
-    queryKey: ['posts', ids],
-    queryFn: () => getPosts(ids),
-    enabled: !!ids,
   });
 }
 

@@ -73,18 +73,15 @@ paths:
       responses:
         '204':
           description: Profile deleted
-  /detections:
+  /feed:
     get:
-      summary: List detections (with embedded posts)
+      summary: List of posts to show in feed
       parameters:
         - name: profile_id
+          required: true
           in: query
           schema:
             type: string
-        - name: is_relevant
-          in: query
-          schema:
-            type: boolean
         - name: limit
           in: query
           schema:
@@ -95,96 +92,55 @@ paths:
           schema:
             type: integer
             default: 0
+        - name: filters
+          in: query
+          schema:
+            $ref: '#/components/schemas/FeedFilters'
+        - name: order
+          in: query
+          schema:
+            description: What will be shown first?
+            type: string
+            enum: [new, max_score, relevant]
+            default: new
       responses:
         '200':
-          description: A list of detections, each including its post
+          description: A list of posts
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/DetectionWithPost'
+                  $ref: '#/components/schemas/FeedPost'
   /user_classifications:
     get:
-      summary: List user classifications
+      summary: Retrieve a specific user classification
       parameters:
         - name: profile_id
           in: query
+          required: true
           schema:
             type: string
         - name: post_id
           in: query
+          required: true
           schema:
             type: string
-        - name: is_relevant
-          in: query
-          schema:
-            type: boolean
-        - name: limit
-          in: query
-          schema:
-            type: integer
-            default: 10
-        - name: offset
-          in: query
-          schema:
-            type: integer
-            default: 0
       responses:
         '200':
-          description: A list of user classifications with embedded posts
+          description: Classification for this profile and post,
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/UserClassificationWithPost'
+                $ref: '#/components/schemas/UserClassification'
     post:
-      summary: Create a new user classification
+      summary: Create, replace or clear a user classification
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/NewUserClassification'
-      responses:
-        '201':
-          description: The created classification
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UserClassification'
-  /user_classifications/{profileId}/{postId}:
-    parameters:
-      - name: profileId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: postId
-        in: path
-        required: true
-        schema:
-          type: string
-    get:
-      summary: Retrieve a specific user classification
-      responses:
-        '200':
-          description: Classification found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UserClassification'
-        '404':
-          description: Classification not found
-    put:
-      summary: Replace a user classification
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/NewUserClassification'
+              $ref: '#/components/schemas/UserClassification'
       responses:
         '200':
           description: The updated classification
@@ -192,30 +148,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserClassification'
-    delete:
-      summary: Delete a user classification
-      responses:
-        '204':
-          description: Classification deleted
-  /posts:
-    get:
-      summary: List posts
-      parameters:
-        - name: ids
-          in: query
-          description: Comma-separated post IDs to filter by
-          schema:
-            type: string
-            example: "1,2,3"
-      responses:
-        '200':
-          description: A list of raw posts
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Post'
+
   /analyze_posts:
     post:
       summary: Preview detections for a modified profile against given post IDs
@@ -227,7 +160,7 @@ paths:
               $ref: '#/components/schemas/AnalyzePostsRequest'
       responses:
         '200':
-          description: Generated detections and any errors
+          description: Generated detections and any errors. Note that those detections will not be stored
           content:
             application/json:
               schema:
@@ -266,7 +199,7 @@ components:
         - relevancy_filter_prompt
         - properties_prompts
 
-    PostReddit:
+    RedditPost:
       type: object
       properties:
         permalink:
@@ -277,10 +210,6 @@ components:
           type: integer
         subreddit:
           type: string
-        comments:
-          type: array
-          items:
-            type: object
       required:
         - permalink
         - score
@@ -298,7 +227,7 @@ components:
         content:
           type: string
         reddit:
-          $ref: '#/components/schemas/PostReddit'
+          $ref: '#/components/schemas/RedditPost'
       required:
         - id
         - title
@@ -331,19 +260,38 @@ components:
         - extracted_properties
         - created_at
 
-    DetectionWithPost:
-      allOf:
-        - $ref: '#/components/schemas/Detection'
-        - type: object
-          properties:
-            post:
-              $ref: '#/components/schemas/Post'
-            user_classification:
-              $ref: '#/components/schemas/UserClassification'
-          required:
-            - post
+    FeedPost:
+      type: object
+      properties:
+        detection:
+          $ref: '#/components/schemas/Detection'
+        post:
+          $ref: '#/components/schemas/Post'
+        user_classification:
+          $ref: '#/components/schemas/UserClassification'
 
-    NewUserClassification:
+    FeedFilters:
+      description: Filters you can set for the feed of posts
+      type: object
+      properties:
+        is_relevant:
+          type: boolean
+        has_user_classification:
+          type: boolean
+        user_classification_value:
+          type: boolean
+        newer:
+          type: string
+          format: date-time
+        reddit:
+          type: object
+          properties:
+            subreddit:
+              type: string
+            score_greater:
+              type: integer
+
+    UserClassification:
       type: object
       properties:
         profile_id:
@@ -351,32 +299,13 @@ components:
         post_id:
           type: string
         is_relevant:
+          description: 'Null means user did not set it yet'
           type: boolean
+          nullable: true
       required:
         - profile_id
         - post_id
         - is_relevant
-
-    UserClassification:
-      allOf:
-        - $ref: '#/components/schemas/NewUserClassification'
-        - type: object
-          properties:
-            created_at:
-              type: string
-              format: date-time
-          required:
-            - created_at
-
-    UserClassificationWithPost:
-      allOf:
-        - $ref: '#/components/schemas/UserClassification'
-        - type: object
-          properties:
-            post:
-              $ref: '#/components/schemas/Post'
-          required:
-            - post
 
     AnalyzePostsRequest:
       type: object
@@ -397,27 +326,14 @@ components:
         detections:
           type: array
           items:
-            type: object
-            properties:
-              post_id:
-                type: string
-              is_relevant:
-                type: boolean
-              extracted_properties:
-                type: object
-                additionalProperties:
-                  type: string
-            required:
-              - post_id
-              - is_relevant
-              - extracted_properties
+            $ref: '#/components/schemas/Detection'
         errors:
           type: array
           items:
             type: object
             properties:
               post_id:
-                type: integer
+                type: string
               error:
                 type: string
             required:
