@@ -222,6 +222,8 @@ components:
       properties:
         id:
           type: string
+        source_id:
+          type: string
         title:
           type: string
         content:
@@ -238,6 +240,8 @@ components:
       type: object
       properties:
         id:
+          type: string
+        source_id:
           type: string
         profile_id:
           type: string
@@ -274,6 +278,8 @@ components:
       description: Filters you can set for the feed of posts
       type: object
       properties:
+        source_id:
+          type: string
         is_relevant:
           type: boolean
         has_user_classification:

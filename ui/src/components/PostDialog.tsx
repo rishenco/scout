@@ -4,20 +4,22 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { type DetectionWithPost } from '@/api/models'
-import { Badge } from '@/components/ui/badge'
+import type { Detection, Post, UserClassification } from '@/api/models'
 import { ExtractedProperties } from '@/components/ExtractedProperties'
 import { ArrowUpIcon, MessageSquareIcon } from 'lucide-react'
 import { PostReaction } from '@/components/PostReaction'
+import { RelevancyBadge } from "./RelevancyBadge"
 
 interface PostDialogProps {
-  detection: DetectionWithPost
+  detection: Detection
+  post: Post
+  userClassification?: UserClassification
   open: boolean
   onOpenChange: (open: boolean) => void
 }
 
-export function PostDialog({ detection, open, onOpenChange }: PostDialogProps) {
-  const { post, is_relevant, extracted_properties } = detection
+export function PostDialog({ detection, post, userClassification, open, onOpenChange }: PostDialogProps) {
+  const { is_relevant, extracted_properties } = detection
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -25,9 +27,7 @@ export function PostDialog({ detection, open, onOpenChange }: PostDialogProps) {
         <DialogHeader>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <span>r/{post.reddit.subreddit}</span>
-            <Badge variant={is_relevant ? "default" : "secondary"} className="text-xs">
-              {is_relevant ? 'Relevant' : 'Not Relevant'}
-            </Badge>
+            <RelevancyBadge isRelevant={is_relevant} compact={false} />
           </div>
           <DialogTitle className="text-xl font-semibold mt-1">{post.title}</DialogTitle>
         </DialogHeader>
@@ -52,7 +52,10 @@ export function PostDialog({ detection, open, onOpenChange }: PostDialogProps) {
                 <span>{post.reddit.num_comments} comments</span>
               </div>
               
-              <PostReaction detection={detection} />
+              <PostReaction 
+                detection={detection} 
+                userClassification={userClassification} 
+              />
             </div>
             <a 
               href={`https://reddit.com${post.reddit.permalink}`} 

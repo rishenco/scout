@@ -3,7 +3,6 @@ import { ProfileCard } from '@/components/ProfileCard'
 import { Button } from '@/components/ui/button'
 import { Link } from 'react-router-dom'
 import { PlusCircle } from 'lucide-react'
-import { Card, CardContent, CardFooter } from '@/components/ui/card'
 
 interface ProfileListProps {
   profiles: Profile[]

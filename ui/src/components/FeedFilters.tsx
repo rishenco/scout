@@ -1,21 +1,19 @@
-import { useState } from 'react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
-
-export type FeedFiltersValues = {
-  relevancy: 'all' | 'relevant' | 'irrelevant'
-}
+import type { FeedFilters } from '@/api/models'
 
 interface FeedFiltersProps {
-  filters: FeedFiltersValues
-  onFiltersChange: (filters: FeedFiltersValues) => void
+  filters: FeedFilters
+  onFiltersChange: (filters: FeedFilters) => void
 }
 
 export function FeedFilters({ filters, onFiltersChange }: FeedFiltersProps) {
+  const isRelevantKey = filters.is_relevant === undefined ? 'all' : filters.is_relevant ? 'relevant' : 'irrelevant'
+
   const handleRelevancyChange = (value: string) => {
     onFiltersChange({
       ...filters,
-      relevancy: value as FeedFiltersValues['relevancy']
+      is_relevant: value === 'all' ? undefined : value === 'relevant'
     })
   }
 
@@ -24,7 +22,7 @@ export function FeedFilters({ filters, onFiltersChange }: FeedFiltersProps) {
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="relevancy-filter">Relevancy</Label>
         <Select
-          value={filters.relevancy}
+          value={isRelevantKey}
           onValueChange={handleRelevancyChange}
         >
           <SelectTrigger id="relevancy-filter" className="w-[180px]">
