@@ -51,7 +51,7 @@ export function SubredditSelector({
       }
       
       return null;
-    } catch (e) {
+    } catch (_) {
       // If URL parsing fails, it's not a valid URL
       return null;
     }

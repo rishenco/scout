@@ -7,6 +7,15 @@ export default {
   ],
   theme: {
   	extend: {
+  		keyframes: {
+  			'hourglass-turn': {
+  				'0%': { transform: 'rotate(0deg)' },
+  				'100%': { transform: 'rotate(360deg)' },
+  			}
+  		},
+  		animation: {
+  			'hourglass-turn': 'hourglass-turn 1.5s cubic-bezier(.79,.14,.15,.86) infinite',
+  		},
   		borderRadius: {
   			lg: 'var(--radius)',
   			md: 'calc(var(--radius) - 2px)',

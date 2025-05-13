@@ -16,7 +16,7 @@ export function ExtractedProperties({ properties, className }: ExtractedProperti
 
   return (
     <Card className={className}>
-      <CardContent className="py-2">
+      <CardContent className="py-2 px-3">
         <div className="space-y-0.5">
           {Object.entries(properties).map(([key, value]) => (
             <div key={key} className="border-b pb-0.5 last:border-0">
