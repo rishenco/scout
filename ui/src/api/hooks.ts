@@ -72,11 +72,11 @@ export function useDeleteProfile() {
 
 const FEED_PAGE_SIZE = 10;
 
-export function useFeed(params: {
+export function useInfiniteFeed(params: {
   profile_id: string;
   filters?: FeedFilters;
   order?: 'new' | 'max_score' | 'relevant';
-}, options?: { enabled?: boolean }) {
+}) {
   return useInfiniteQuery<FeedPost[], Error, InfiniteData<FeedPost[]>, [string, typeof params], number>({
     queryKey: ['feed', params],
     queryFn: ({ pageParam = 0 }) => getFeed({ ...params, offset: pageParam * FEED_PAGE_SIZE, limit: FEED_PAGE_SIZE }),
@@ -87,16 +87,15 @@ export function useFeed(params: {
       }
       return lastPageParam + 1;
     },
-    enabled: options?.enabled ?? true,
+    staleTime: 1000 * 60 * 5, // 5 minutes
   });
 }
 
-export function useCreateUserClassification() {
+export function useUpdateUserClassification() {
   const queryClient = useQueryClient();
   return useMutation<UserClassification, Error, UserClassification>({
     mutationFn: updateUserClassification,
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['feed', { profile_id: data.profile_id }] });
       queryClient.setQueryData(['user_classification', data.profile_id, data.post_id], data);
       queryClient.setQueryData<InfiniteData<FeedPost[]>>(['feed', { profile_id: data.profile_id }], (oldData) => {
         if (!oldData) return oldData;
@@ -110,6 +109,7 @@ export function useCreateUserClassification() {
           }))
         };
       });
+      queryClient.invalidateQueries({ queryKey: ['feed', { profile_id: data.profile_id }] });
     },
   });
 }
