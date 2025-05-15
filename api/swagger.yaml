@@ -1,0 +1,532 @@
+openapi: 3.0.0
+
+info:
+  title: Scout API
+  version: 1.0.0
+  description: >
+    Scout is a tool for detecting relevant content in social media.
+
+security:
+  - basicAuth: [] 
+
+servers:
+  - url: http://localhost:5601
+
+paths:
+  /api/profiles:
+    get:
+      summary: Get all profiles
+      responses:
+        "200":
+          description: A list of profiles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Profile'
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      summary: Create a new profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Profile'
+      responses:
+        "201":
+          description: Profile created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                required:
+                  - id
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/profiles/{id}:
+    get:
+      summary: Get a profile by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+        "404":
+          description: Profile not found
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      summary: Update a profile by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfileUpdate'
+      responses:
+        "200":
+          description: Profile updated successfully
+        "404":
+          description: Profile not found
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      summary: Delete a profile by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Profile deleted successfully
+        "404":
+          description: Profile not found
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/detections/list:
+    post:
+      summary: List detections
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DetectionListRequest'
+      responses:
+        "200":
+          description: A list of detections
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ListedDetection'
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  
+  /api/detections/tags:
+    put:
+      summary: Detection tag update
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DetectionTagUpdateRequest'
+      responses:
+        "204":
+          description: Detection tag updated successfully
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  
+  /api/analyze:
+    post:
+      summary: Analyze a post
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnalyzeRequest'
+      responses:
+        "200":
+          description: Post analyzed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Detection'
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/sources/reddit/subreddits:
+    get:
+      summary: Get all subreddits
+      responses:
+        "200":
+          description: A list of subreddits
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SubredditSettings'
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/sources/reddit/subreddits/{subreddit}/add_profiles:
+    post:
+      summary: Add profiles
+      parameters:
+        - name: subreddit
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                profile_ids:
+                  type: array
+                  items:
+                    type: integer
+              required:
+                - profile_ids
+                    
+      responses:
+        "204":
+          description: Profiles added successfully
+        "401":
+          description: Unauthorized
+        "404":
+          description: Profile not found
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/sources/reddit/subreddits/{subreddit}/remove_profiles:
+    post:
+      summary: Remove profiles
+      parameters:
+        - name: subreddit
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                profile_ids:
+                  type: array
+                  items:
+                    type: integer
+              required:
+                - profile_ids
+                    
+      responses:
+        "204":
+          description: Profiles removed successfully
+        "401":
+          description: Unauthorized
+        "404":
+          description: Profile not found
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/sources/reddit/subreddits_with_profile:
+    get:
+      summary: Get all subreddits by profile
+      parameters:
+        - name: profile_id
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: A list of subreddits
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SubredditSettings'
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  securitySchemes:
+    basicAuth:
+        type: http
+        scheme: basic
+        description: Basic authentication with username and password
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    Profile:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        created_at:
+          type: string
+        updated_at:
+          type: string
+        default_settings:
+          $ref: '#/components/schemas/ProfileSettings'
+        sources_settings:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/ProfileSettings'
+      required:
+        - id
+        - name
+        - created_at
+        - updated_at
+
+    ProfileSettings:
+      type: object
+      properties:
+        relevancy_filter:
+          type: string
+        extracted_properties:
+          type: object
+          additionalProperties:
+            type: string
+        updated_at:
+          type: string
+        created_at:
+          type: string
+      required:
+        - relevancy_filter
+        - extracted_properties
+        - updated_at
+        - created_at
+    
+    ProfileUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        default_settings:
+          $ref: '#/components/schemas/ProfileSettingsUpdate'
+        sources_settings:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/ProfileSettingsUpdate'
+    
+    ProfileSettingsUpdate:
+      type: object
+      nullable: true
+      properties:
+        relevancy_filter:
+          type: string
+        extracted_properties:
+          type: object
+          additionalProperties:
+            type: string
+            nullable: true
+
+    DetectionListRequest:
+      type: object
+      properties:
+        last_seen_id:
+          type: integer
+        limit:
+          type: integer
+          default: 10
+        filter:
+          $ref: '#/components/schemas/DetectionFilter'
+    
+    DetectionFilter:
+      type: object
+      properties:
+        profiles:
+          type: array
+          items:
+            type: integer
+        sources:
+          type: array
+          items:
+            type: string
+        is_relevant:
+          type: boolean
+        tags:
+          $ref: '#/components/schemas/DetectionTagsFilter'
+    
+    DetectionTagsFilter:
+      type: object
+      properties:
+        relevancy_detected_correctly:
+          type: array
+          items:
+            type: boolean
+            x-go-type: '*bool'
+
+    DetectionTags:
+      type: object
+      properties:
+        relevancy_detected_correctly:
+          type: boolean
+
+    DetectionTagUpdateRequest:
+      type: object
+      properties:
+        detection_id:
+          type: integer
+        tags:
+          type: object
+          properties:
+            relevancy_detected_correctly:
+              type: boolean
+              nullable: true
+      required:
+        - detection_id
+        - tags
+
+    Detection:
+      type: object
+      properties:
+        id:
+          type: integer
+        source:
+          type: string
+        source_id:
+          type: string
+        profile_id:
+          type: integer
+        is_relevant:
+          type: boolean
+        properties:
+          type: object
+          additionalProperties:
+            type: string
+        created_at:
+          type: string
+      required:
+        - id
+        - source
+        - source_id
+        - profile_id
+        - is_relevant
+        - properties
+        - created_at
+
+    ListedDetection:
+      type: object
+      properties:
+        detection:
+          $ref: '#/components/schemas/Detection'
+        source_post:
+          type: object
+        tags:
+          $ref: '#/components/schemas/DetectionTags'
+    
+    AnalyzeRequest:
+      type: object
+      properties:
+        source:
+          type: string
+        source_id:
+          type: string
+        relevancy_filter:
+          type: string
+        extracted_properties:
+          type: object
+          additionalProperties:
+            type: string
+      required:
+        - source
+        - source_id
+        - relevancy_filter
+        - extracted_properties
+
+    SubredditSettings:
+      type: object
+      properties:
+        subreddit:
+          type: string
+        profiles:
+          type: array
+          items:
+            type: integer
+      required:
+        - subreddit
+        - profiles

@@ -1,0 +1,39 @@
+google:
+  model: "gemini-2.0-flash"
+  temperature: 0.25
+
+task_processor:
+  batch_size: 100
+  workers: 5
+  timeout: 1s
+  error_timeout: 3s
+  no_tasks_timeout: 5s
+  disabled: false
+
+api:
+  port: 5601
+  disabled: false
+
+reddit:
+  scraper:
+    timeout: 1s
+    error_timeout: 3s
+    timeout_after_full_scan: 3s
+    at_least_one_exhausting_scan: true
+    disabled: false
+  
+  enricher:
+    batch_size: 100
+    min_post_age: 48h
+    workers: 5
+    retries: 3
+    timeout: 1s
+    error_timeout: 3s
+    disabled: false
+  
+  scheduler:
+    batch_size: 100
+    min_score: 10
+    timeout: 1s
+    error_timeout: 3s
+    disabled: false
