@@ -74,7 +74,6 @@ func (s *Scout) Analyze(ctx context.Context, source string, sourceID string, pro
 		Properties: detection.Properties,
 	}
 
-	if shouldSave {
 		if err := s.storage.SaveDetection(ctx, record); err != nil {
 			logger.Error().Err(err).Msg("failed to save post")
 
@@ -82,7 +81,7 @@ func (s *Scout) Analyze(ctx context.Context, source string, sourceID string, pro
 		}
 	}
 
-	logger.Info().Msg("post analyzed")
+	logger.Info().Msgf("post %s analyzed", post.ID())
 
 	return detection, nil
 }

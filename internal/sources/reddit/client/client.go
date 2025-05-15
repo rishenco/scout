@@ -15,7 +15,7 @@ type requestsLog interface {
 }
 
 const (
-	defaultLimit = 100 // Default limit for Reddit API requests
+	maxLimit = 100 // Default limit for Reddit API requests
 )
 
 // Client handles interactions with the Reddit API
@@ -62,7 +62,7 @@ func (c *Client) GetPosts(ctx context.Context, subreddit string, after string, l
 		Str("after", after).
 		Msg("retrieving posts")
 
-	limit = min(limit, defaultLimit)
+	limit = min(limit, maxLimit)
 
 	// Define the listing options
 	opts := &redditlib.ListOptions{
