@@ -3,11 +3,16 @@ package reddit
 import (
 	"time"
 
-	"github.com/rishenco/scout/internal/models"
-
 	"github.com/samber/lo"
 	"github.com/vartanbeno/go-reddit/v2/reddit"
+
+	"github.com/rishenco/scout/internal/sources"
 )
+
+type RawPostAndComments struct {
+	Data   []byte `json:"data"`
+	PostID string `json:"post_id"`
+}
 
 type SubredditSettings struct {
 	Profiles  []int64 `json:"profiles"`
@@ -25,7 +30,7 @@ func (p PostAndComments) ID() string {
 }
 
 func (p PostAndComments) Source() string {
-	return models.RedditSource
+	return sources.RedditSource
 }
 
 type Post struct {

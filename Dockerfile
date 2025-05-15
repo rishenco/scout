@@ -8,7 +8,7 @@ RUN go mod download
 
 COPY . .
 
-RUN go build -o scout ./cmd/main.go
+RUN go build -o scout ./cmd/scout
 
 FROM alpine:3.17
 

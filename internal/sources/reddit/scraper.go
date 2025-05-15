@@ -83,6 +83,10 @@ func (s *Scraper) Start(ctx context.Context) error {
 }
 
 func (s *Scraper) poll(ctx context.Context, paginator_ *paginator) error {
+	if err := s.syncSubreddits(ctx, paginator_); err != nil {
+		return fmt.Errorf("sync subreddits: %w", err)
+	}
+
 	// select subreddit
 	var subreddit string
 

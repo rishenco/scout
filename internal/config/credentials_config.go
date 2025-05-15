@@ -16,6 +16,8 @@ type CredentialsConfig struct {
 	RedditUsername     string `envconfig:"REDDIT_USERNAME" required:"true"`
 	RedditPassword     string `envconfig:"REDDIT_PASSWORD" required:"true"`
 	RedditUserAgent    string `envconfig:"REDDIT_USER_AGENT" default:"scout:v1.0"`
+
+	APIAccounts map[string]string `envconfig:"API_ACCOUNTS" required:"true"`
 }
 
 func ParseCredentialsConfig() (CredentialsConfig, error) {

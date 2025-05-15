@@ -1,6 +1,6 @@
 version: '3.8'
 
-name: idea-searcher
+name: scout
 
 services:
   postgres:
@@ -13,7 +13,6 @@ services:
       - "9356:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./migrations:/docker-entrypoint-initdb.d
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U scout -d scout"]
       interval: 5s

@@ -17,6 +17,20 @@ type SettingsConfig struct {
 		Temperature float32 `json:"temperature" yaml:"temperature"`
 	} `json:"google" yaml:"google"`
 
+	TaskProcessor struct {
+		BatchSize      int           `json:"batch_size" yaml:"batch_size"`
+		Workers        int           `json:"workers" yaml:"workers"`
+		Timeout        time.Duration `json:"timeout" yaml:"timeout"`
+		ErrorTimeout   time.Duration `json:"error_timeout" yaml:"error_timeout"`
+		NoTasksTimeout time.Duration `json:"no_tasks_timeout" yaml:"no_tasks_timeout"`
+		Disabled       bool          `json:"disabled" yaml:"disabled"`
+	} `json:"task_processor" yaml:"task_processor"`
+
+	API struct {
+		Port     int  `json:"port" yaml:"port"`
+		Disabled bool `json:"disabled" yaml:"disabled"`
+	} `json:"api" yaml:"api"`
+
 	Reddit struct {
 		Scraper struct {
 			Timeout                  time.Duration `json:"timeout" yaml:"timeout"`
@@ -43,15 +57,6 @@ type SettingsConfig struct {
 			ErrorTimeout time.Duration `json:"error_timeout" yaml:"error_timeout"`
 			Disabled     bool          `json:"disabled" yaml:"disabled"`
 		} `json:"scheduler" yaml:"scheduler"`
-
-		TaskProcessor struct {
-			BatchSize      int           `json:"batch_size" yaml:"batch_size"`
-			Workers        int           `json:"workers" yaml:"workers"`
-			Timeout        time.Duration `json:"timeout" yaml:"timeout"`
-			ErrorTimeout   time.Duration `json:"error_timeout" yaml:"error_timeout"`
-			NoTasksTimeout time.Duration `json:"no_tasks_timeout" yaml:"no_tasks_timeout"`
-			Disabled       bool          `json:"disabled" yaml:"disabled"`
-		} `json:"task_processor" yaml:"task_processor"`
 	} `json:"reddit" yaml:"reddit"`
 }
 

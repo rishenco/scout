@@ -6,20 +6,23 @@ import (
 	"sync"
 	"time"
 
-	"github.com/rishenco/scout/internal/models"
+	"github.com/rishenco/scout/pkg/models"
 	"github.com/rs/zerolog"
 )
 
-type scout[PostType models.PostInterface] interface {
-	GetProfile(ctx context.Context, profileID int64) (models.Profile, error)
-	GetPost(ctx context.Context, postID int64) (PostType, error)
-	Analyze(ctx context.Context, post PostType, profile models.Profile, shouldPublish bool) (models.Detection, error)
+type taskQueue interface {
+	Claim(ctx context.Context) (task models.AnalysisTask, anyTask bool, err error)
+	Commit(ctx context.Context, taskID int64) error
 }
 
-type TaskProcessor[PostType models.PostInterface] struct {
-	taskStorage    taskStorage
-	scout          scout[PostType]
-	source         string
+type scout interface {
+	GetProfile(ctx context.Context, profileID int64) (profile models.Profile, found bool, err error)
+	Analyze(ctx context.Context, source string, sourceID string, profileSettings models.ProfileSettings, shouldSave bool) (detection models.Detection, err error)
+}
+
+type TaskProcessor struct {
+	taskQueue      taskQueue
+	scout          scout
 	batchSize      int
 	timeout        time.Duration
 	errorTimeout   time.Duration
@@ -28,21 +31,19 @@ type TaskProcessor[PostType models.PostInterface] struct {
 	logger         zerolog.Logger
 }
 
-func NewTaskProcessor[PostType models.PostInterface](
-	taskStorage taskStorage,
-	scout scout[PostType],
-	source string,
+func NewTaskProcessor(
+	taskQueue taskQueue,
+	scout scout,
 	batchSize int,
 	timeout time.Duration,
 	errorTimeout time.Duration,
 	noTasksTimeout time.Duration,
 	workers int,
 	logger zerolog.Logger,
-) *TaskProcessor[PostType] {
-	return &TaskProcessor[PostType]{
-		taskStorage:    taskStorage,
+) *TaskProcessor {
+	return &TaskProcessor{
+		taskQueue:      taskQueue,
 		scout:          scout,
-		source:         source,
 		batchSize:      batchSize,
 		timeout:        timeout,
 		errorTimeout:   errorTimeout,
@@ -52,8 +53,12 @@ func NewTaskProcessor[PostType models.PostInterface](
 	}
 }
 
-func (p *TaskProcessor[PostType]) Start(ctx context.Context) {
+func (p *TaskProcessor) Start(ctx context.Context) {
 	wg := new(sync.WaitGroup)
+
+	p.logger.Info().
+		Int("workers", p.workers).
+		Msg("starting task processor")
 
 	for range p.workers {
 		wg.Add(1)
@@ -67,7 +72,7 @@ func (p *TaskProcessor[PostType]) Start(ctx context.Context) {
 	wg.Wait()
 }
 
-func (p *TaskProcessor[PostType]) processTasks(ctx context.Context) {
+func (p *TaskProcessor) processTasks(ctx context.Context) {
 	timeout := p.timeout
 
 	for {
@@ -98,8 +103,8 @@ func (p *TaskProcessor[PostType]) processTasks(ctx context.Context) {
 	}
 }
 
-func (p *TaskProcessor[PostType]) processTask(ctx context.Context) (anyTask bool, err error) {
-	task, anyTask, err := p.taskStorage.Claim(ctx, p.source)
+func (p *TaskProcessor) processTask(ctx context.Context) (anyTask bool, err error) {
+	task, anyTask, err := p.taskQueue.Claim(ctx)
 	if err != nil {
 		return false, fmt.Errorf("claim analysis task for processing: %w", err)
 	}
@@ -108,19 +113,38 @@ func (p *TaskProcessor[PostType]) processTask(ctx context.Context) (anyTask bool
 		return false, nil
 	}
 
-	post, err := p.scout.GetPost(ctx, task.PostID)
-	if err != nil {
-		return false, fmt.Errorf("get post: %w", err)
-	}
+	p.logger.Info().
+		Int64("task_id", task.ID).
+		Int64("profile_id", task.ProfileID).
+		Str("source", task.Source).
+		Str("source_id", task.SourceID).
+		Msg("processing task")
 
-	profile, err := p.scout.GetProfile(ctx, task.ProfileID)
+	profile, found, err := p.scout.GetProfile(ctx, task.ProfileID)
 	if err != nil {
 		return false, fmt.Errorf("get profile: %w", err)
 	}
 
-	_, err = p.scout.Analyze(ctx, post, profile, task.ShouldSave)
+	if !found {
+		return false, fmt.Errorf("profile not found")
+	}
+
+	profileSettings, found := profile.SourcesSettings[task.Source]
+	if !found {
+		if profile.DefaultSettings == nil {
+			return false, fmt.Errorf("profile settings not found: source = %s, profile id = %d", task.Source, task.ProfileID)
+		}
+
+		profileSettings = *profile.DefaultSettings
+	}
+
+	_, err = p.scout.Analyze(ctx, task.Source, task.SourceID, profileSettings, task.ShouldSave)
 	if err != nil {
 		return false, fmt.Errorf("analyze post: %w", err)
+	}
+
+	if err := p.taskQueue.Commit(ctx, task.ID); err != nil {
+		return false, fmt.Errorf("commit analysis task: %w", err)
 	}
 
 	return anyTask, nil

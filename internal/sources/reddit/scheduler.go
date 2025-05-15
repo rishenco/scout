@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/rishenco/scout/internal/models"
+	"github.com/rishenco/scout/internal/sources"
+	"github.com/rishenco/scout/pkg/models"
 	"github.com/rs/zerolog"
 	"github.com/samber/lo"
 )
@@ -17,7 +18,6 @@ type schedulerStorage interface {
 }
 
 type scout interface {
-	AddPosts(ctx context.Context, posts []PostAndComments) (sourceIDToPostID map[string]int64, err error)
 	ScheduleAnalysis(ctx context.Context, tasks []models.AnalysisTask) error
 }
 
@@ -77,11 +77,6 @@ func (s *Scheduler) schedulePosts(ctx context.Context) error {
 		return fmt.Errorf("get posts for scheduling: %w", err)
 	}
 
-	redditIDToPostID, err := s.scout.AddPosts(ctx, redditPosts)
-	if err != nil {
-		return fmt.Errorf("add posts: %w", err)
-	}
-
 	subredditsSet := make(map[string]struct{})
 
 	for _, post := range redditPosts {
@@ -100,15 +95,6 @@ func (s *Scheduler) schedulePosts(ctx context.Context) error {
 	tasks := make([]models.AnalysisTask, 0)
 
 	for _, redditPost := range redditPosts {
-		scoutPostID, ok := redditIDToPostID[redditPost.ID()]
-		if !ok {
-			s.logger.Warn().
-				Str("reddit_id", redditPost.ID()).
-				Msg("scout post id not found")
-
-			continue
-		}
-
 		subredditSettings, ok := subredditSettingsIndex[redditPost.Post.SubredditName]
 		if !ok {
 			s.logger.Warn().
@@ -120,9 +106,10 @@ func (s *Scheduler) schedulePosts(ctx context.Context) error {
 
 		for _, profileID := range subredditSettings.Profiles {
 			tasks = append(tasks, models.AnalysisTask{
-				PostID:    scoutPostID,
-				ProfileID: profileID,
-				Source:    models.RedditSource,
+				SourceID:   redditPost.Post.ID,
+				ProfileID:  profileID,
+				Source:     sources.RedditSource,
+				ShouldSave: true,
 			})
 		}
 	}
