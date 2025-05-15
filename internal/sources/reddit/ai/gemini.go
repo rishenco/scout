@@ -1,4 +1,4 @@
-package analyzer
+package ai
 
 import (
 	"context"
@@ -10,8 +10,8 @@ import (
 	"github.com/rs/zerolog"
 	"google.golang.org/api/option"
 
-	"github.com/rishenco/scout/internal/models"
 	"github.com/rishenco/scout/internal/sources/reddit"
+	"github.com/rishenco/scout/pkg/models"
 )
 
 type requestsLog interface {
@@ -23,25 +23,26 @@ type GeminiSettings struct {
 	Temperature float32
 }
 
-type GeminiAnalyzer struct {
+type Gemini struct {
 	client      *genai.Client
 	settings    GeminiSettings
 	requestsLog requestsLog
 	logger      zerolog.Logger
 }
 
-func NewGeminiAnalyzer(
+func NewGemini(
+	ctx context.Context,
 	apiKey string,
 	settings GeminiSettings,
 	requestsLog requestsLog,
 	logger zerolog.Logger,
-) (*GeminiAnalyzer, error) {
-	client, err := genai.NewClient(context.Background(), option.WithAPIKey(apiKey))
+) (*Gemini, error) {
+	client, err := genai.NewClient(ctx, option.WithAPIKey(apiKey))
 	if err != nil {
 		return nil, fmt.Errorf("new client: %w", err)
 	}
 
-	return &GeminiAnalyzer{
+	return &Gemini{
 		client:      client,
 		settings:    settings,
 		requestsLog: requestsLog,
@@ -49,14 +50,14 @@ func NewGeminiAnalyzer(
 	}, nil
 }
 
-func (a *GeminiAnalyzer) Analyze(
+func (a *Gemini) Analyze(
 	ctx context.Context,
 	post reddit.PostAndComments,
-	profile models.Profile,
+	profileSettings models.ProfileSettings,
 ) (detection models.Detection, err error) {
 	logger := a.logger.With().Str("post_id", post.ID()).Str("source", post.Source()).Logger()
 
-	postInputObject, err := a.prepareInputObject(profile, post)
+	postInputObject, err := a.prepareInputObject(profileSettings, post)
 	if err != nil {
 		return models.Detection{}, fmt.Errorf("convert post to input object: %w", err)
 	}
@@ -73,7 +74,7 @@ func (a *GeminiAnalyzer) Analyze(
 	model.SetTopK(0)
 	model.SetTopP(0.95)
 	model.SetMaxOutputTokens(8192)
-	model.ResponseSchema = a.getResponseSchema(profile.ExtractedProperties)
+	model.ResponseSchema = a.getResponseSchema(profileSettings.ExtractedProperties)
 	model.ResponseMIMEType = "application/json"
 	model.SystemInstruction = &genai.Content{
 		Parts: []genai.Part{genai.Text(Prompt)},
@@ -119,7 +120,7 @@ func (a *GeminiAnalyzer) Analyze(
 	return detection, nil
 }
 
-func (a *GeminiAnalyzer) getResponseSchema(extractedProperties map[string]string) *genai.Schema {
+func (a *Gemini) getResponseSchema(extractedProperties map[string]string) *genai.Schema {
 	// {
 	// "is_relevant": true,
 	// "properties": {
@@ -155,7 +156,7 @@ func (a *GeminiAnalyzer) getResponseSchema(extractedProperties map[string]string
 	return responseSchema
 }
 
-func (a *GeminiAnalyzer) prepareInputObject(profile models.Profile, post reddit.PostAndComments) (redditInputObject, error) {
+func (a *Gemini) prepareInputObject(profileSettings models.ProfileSettings, post reddit.PostAndComments) (redditInputObject, error) {
 	// Sort comments by score in descending order
 	sort.Slice(post.Comments, func(i, j int) bool {
 		return post.Comments[i].Score > post.Comments[j].Score
@@ -180,8 +181,8 @@ func (a *GeminiAnalyzer) prepareInputObject(profile models.Profile, post reddit.
 			Link:  post.Post.URL,
 		},
 		Comments:            comments,
-		RelevancyFilter:     profile.RelevancyFilter,
-		ExtractedProperties: profile.ExtractedProperties,
+		RelevancyFilter:     profileSettings.RelevancyFilter,
+		ExtractedProperties: profileSettings.ExtractedProperties,
 	}
 
 	return inputObject, nil

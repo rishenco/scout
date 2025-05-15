@@ -1,0 +1,10 @@
+package: oapi
+output: oapi.gen.go
+generate:
+  models: true
+  embedded-spec: true
+  strict-server: true
+  client: true
+  gin-server: true
+output-options:
+  nullable-type: true

@@ -3,22 +3,25 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/rishenco/scout/internal/codec"
+	"github.com/rishenco/scout/api"
 	"github.com/rishenco/scout/internal/config"
-	"github.com/rishenco/scout/internal/models"
 	"github.com/rishenco/scout/internal/pg"
 	"github.com/rishenco/scout/internal/scout"
+	"github.com/rishenco/scout/internal/sources"
 	"github.com/rishenco/scout/internal/sources/reddit"
-	redditanalyzer "github.com/rishenco/scout/internal/sources/reddit/analyzer"
+	redditai "github.com/rishenco/scout/internal/sources/reddit/ai"
 	redditclient "github.com/rishenco/scout/internal/sources/reddit/client"
 	redditpg "github.com/rishenco/scout/internal/sources/reddit/pg"
 	"github.com/rishenco/scout/internal/tools"
@@ -60,9 +63,10 @@ func main() {
 	requestsStorage := pg.NewRequestsStorage(postgresPool, componentLogger(logger, "requests_storage"))
 	redditStorage := redditpg.NewStorage(postgresPool, componentLogger(logger, "reddit_storage"))
 
-	redditAnalyzer, err := redditanalyzer.NewGeminiAnalyzer(
+	redditGeminiAI, err := redditai.NewGemini(
+		ctx,
 		credentialsConfig.GeminiAPIKey,
-		redditanalyzer.GeminiSettings{
+		redditai.GeminiSettings{
 			Model:       settingsConfig.Google.Model,
 			Temperature: settingsConfig.Google.Temperature,
 		},
@@ -73,13 +77,10 @@ func main() {
 		logger.Fatal().Err(err).Msg("failed to create gemini reddit analyzer")
 	}
 
-	redditScout := scout.New(
-		redditAnalyzer,
-		scoutStorage,
-		taskStorage,
-		codec.JSONCodec[reddit.PostAndComments]{},
-		models.RedditSource,
-		componentLogger(logger, "reddit_scout"),
+	redditToolkit := reddit.NewToolkit(
+		redditStorage,
+		redditGeminiAI,
+		componentLogger(logger, "reddit_analyzer"),
 	)
 
 	redditClient, err := redditclient.New(
@@ -119,9 +120,18 @@ func main() {
 		componentLogger(logger, "reddit_enricher"),
 	)
 
+	scoutService := scout.New(
+		map[string]scout.SourceToolkit{
+			sources.RedditSource: redditToolkit,
+		},
+		scoutStorage,
+		taskStorage,
+		componentLogger(logger, "scout"),
+	)
+
 	redditScheduler := reddit.NewScheduler(
 		redditStorage,
-		redditScout,
+		scoutService,
 		settingsConfig.Reddit.Scheduler.BatchSize,
 		settingsConfig.Reddit.Scheduler.MinScore,
 		settingsConfig.Reddit.Scheduler.Timeout,
@@ -129,16 +139,15 @@ func main() {
 		componentLogger(logger, "reddit_scheduler"),
 	)
 
-	redditTaskProcessor := scout.NewTaskProcessor(
+	scoutProcessor := scout.NewTaskProcessor(
 		taskStorage,
-		redditScout,
-		models.RedditSource,
-		settingsConfig.Reddit.TaskProcessor.BatchSize,
-		settingsConfig.Reddit.TaskProcessor.Timeout,
-		settingsConfig.Reddit.TaskProcessor.ErrorTimeout,
-		settingsConfig.Reddit.TaskProcessor.NoTasksTimeout,
-		settingsConfig.Reddit.TaskProcessor.Workers,
-		componentLogger(logger, "reddit_task_processor"),
+		scoutService,
+		settingsConfig.TaskProcessor.BatchSize,
+		settingsConfig.TaskProcessor.Timeout,
+		settingsConfig.TaskProcessor.ErrorTimeout,
+		settingsConfig.TaskProcessor.NoTasksTimeout,
+		settingsConfig.TaskProcessor.Workers,
+		componentLogger(logger, "processor"),
 	)
 
 	// Run services using errgroup
@@ -174,11 +183,48 @@ func main() {
 		})
 	}
 
-	if !settingsConfig.Reddit.TaskProcessor.Disabled {
+	if !settingsConfig.TaskProcessor.Disabled {
 		g.Go(func() error {
-			redditTaskProcessor.Start(ctx)
+			scoutProcessor.Start(ctx)
 
 			return nil
+		})
+	}
+
+	if !settingsConfig.API.Disabled {
+		server := api.NewServer(
+			scoutService,
+			redditToolkit,
+			logger,
+		)
+
+		ginEngine := api.NewGinEngine(
+			server,
+			gin.Recovery(),
+		)
+
+		ginEngine.Group("/api").Use(gin.BasicAuth(gin.Accounts(credentialsConfig.APIAccounts)))
+
+		ginEngine.StaticFile("swagger.yaml", "./api/swagger.yaml")
+
+		httpServer := &http.Server{
+			Addr:    fmt.Sprintf(":%d", settingsConfig.API.Port),
+			Handler: ginEngine,
+		}
+
+		go func() {
+			<-ctx.Done()
+
+			shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer shutdownCancel()
+
+			if err := httpServer.Shutdown(shutdownCtx); err != nil {
+				logger.Error().Err(err).Msg("failed to shutdown http server")
+			}
+		}()
+
+		g.Go(func() error {
+			return httpServer.ListenAndServe()
 		})
 	}
 

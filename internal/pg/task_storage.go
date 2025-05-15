@@ -8,7 +8,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/rishenco/scout/internal/models"
+	"github.com/rishenco/scout/pkg/models"
 	"github.com/rs/zerolog"
 	"github.com/samber/lo"
 )
@@ -27,9 +27,9 @@ func NewTaskStorage(pool *pgxpool.Pool, logger zerolog.Logger) *TaskStorage {
 
 func (s *TaskStorage) Add(ctx context.Context, tasks []models.AnalysisTask) error {
 	columns := []string{
-		"post_id",
-		"profile_id",
 		"source",
+		"source_id",
+		"profile_id",
 		"should_save",
 		"is_claimed",
 		"claimed_at",
@@ -39,9 +39,9 @@ func (s *TaskStorage) Add(ctx context.Context, tasks []models.AnalysisTask) erro
 
 	rows := lo.Map(tasks, func(task models.AnalysisTask, _ int) []any {
 		return []any{
-			task.PostID,
-			task.ProfileID,
 			task.Source,
+			task.SourceID,
+			task.ProfileID,
 			task.ShouldSave,
 			false,
 			nil,
@@ -63,17 +63,17 @@ func (s *TaskStorage) Add(ctx context.Context, tasks []models.AnalysisTask) erro
 	return nil
 }
 
-func (s *TaskStorage) Claim(ctx context.Context, source string) (task models.AnalysisTask, anyTask bool, err error) {
+func (s *TaskStorage) Claim(ctx context.Context) (task models.AnalysisTask, anyTask bool, err error) {
 	query := `
 		UPDATE scout.analysis_tasks
 		SET is_claimed = true, claimed_at = now()
-		WHERE is_claimed = false AND is_committed = false AND source = $1
-		RETURNING id, post_id, profile_id, source, should_save
+		WHERE is_claimed = false AND is_committed = false
+		RETURNING id, source, source_id, profile_id, should_save
 	`
 
-	row := s.pool.QueryRow(ctx, query, source)
+	row := s.pool.QueryRow(ctx, query)
 
-	err = row.Scan(&task.ID, &task.PostID, &task.ProfileID, &task.Source, &task.ShouldSave)
+	err = row.Scan(&task.ID, &task.Source, &task.SourceID, &task.ProfileID, &task.ShouldSave)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return models.AnalysisTask{}, false, nil

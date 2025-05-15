@@ -1,17 +1,23 @@
 openapi: 3.0.0
+
 info:
   title: Scout API
   version: 1.0.0
   description: >
-    API for Scout
+    Scout is a tool for detecting relevant content in social media.
+
+security:
+  - basicAuth: [] 
+
 servers:
   - url: http://localhost:5601
+
 paths:
-  /profiles:
+  /api/profiles:
     get:
-      summary: List all profiles
+      summary: Get all profiles
       responses:
-        '200':
+        "200":
           description: A list of profiles
           content:
             application/json:
@@ -19,6 +25,14 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Profile'
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
     post:
       summary: Create a new profile
       requestBody:
@@ -26,229 +40,304 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ProfileInput'
+              $ref: '#/components/schemas/Profile'
       responses:
-        '201':
-          description: The created profile
+        "201":
+          description: Profile created successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Profile'
-  /profiles/{profileId}:
-    parameters:
-      - name: profileId
-        in: path
-        required: true
-        schema:
-          type: integer
+                type: object
+                properties:
+                  id:
+                    type: integer
+                required:
+                  - id
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/profiles/{id}:
     get:
-      summary: Retrieve a profile by ID
+      summary: Get a profile by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
       responses:
-        '200':
-          description: Profile found
+        "200":
+          description: Profile retrieved successfully
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Profile'
-        '404':
+        "404":
           description: Profile not found
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
     put:
-      summary: Replace an entire profile
+      summary: Update a profile by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ProfileInput'
+              $ref: '#/components/schemas/ProfileUpdate'
       responses:
-        '200':
-          description: The updated profile
+        "200":
+          description: Profile updated successfully
+        "404":
+          description: Profile not found
+        "500":
+          description: Internal server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Profile'
+                $ref: '#/components/schemas/Error'
     delete:
-      summary: Delete a profile
-      responses:
-        '204':
-          description: Profile deleted
-  /detections:
-    get:
-      summary: List detections (with embedded posts)
+      summary: Delete a profile by ID
       parameters:
-        - name: profile_id
-          in: query
+        - name: id
+          in: path
+          required: true
           schema:
             type: integer
-        - name: is_relevant
-          in: query
-          schema:
-            type: boolean
-        - name: limit
-          in: query
-          schema:
-            type: integer
-            default: 10
-        - name: offset
-          in: query
-          schema:
-            type: integer
-            default: 0
       responses:
-        '200':
-          description: A list of detections, each including its post
+        "204":
+          description: Profile deleted successfully
+        "404":
+          description: Profile not found
+        "500":
+          description: Internal server error
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/DetectionWithPost'
-  /user_classifications:
-    get:
-      summary: List user classifications
-      parameters:
-        - name: profile_id
-          in: query
-          schema:
-            type: integer
-        - name: post_id
-          in: query
-          schema:
-            type: integer
-        - name: is_relevant
-          in: query
-          schema:
-            type: boolean
-        - name: limit
-          in: query
-          schema:
-            type: integer
-            default: 10
-        - name: offset
-          in: query
-          schema:
-            type: integer
-            default: 0
-      responses:
-        '200':
-          description: A list of user classifications
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/UserClassification'
+                $ref: '#/components/schemas/Error'
+
+  /api/detections/list:
     post:
-      summary: Create a new user classification
+      summary: List detections
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/NewUserClassification'
+              $ref: '#/components/schemas/DetectionListRequest'
       responses:
-        '201':
-          description: The created classification
+        "200":
+          description: A list of detections
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserClassification'
-  /user_classifications/{profileId}/{postId}:
-    parameters:
-      - name: profileId
-        in: path
-        required: true
-        schema:
-          type: integer
-      - name: postId
-        in: path
-        required: true
-        schema:
-          type: integer
-    get:
-      summary: Retrieve a specific user classification
-      responses:
-        '200':
-          description: Classification found
+                type: array
+                items:
+                  $ref: '#/components/schemas/ListedDetection'
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserClassification'
-        '404':
-          description: Classification not found
+                $ref: '#/components/schemas/Error'
+  
+  /api/detections/tags:
     put:
-      summary: Replace a user classification
+      summary: Detection tag update
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/NewUserClassification'
+              $ref: '#/components/schemas/DetectionTagUpdateRequest'
       responses:
-        '200':
-          description: The updated classification
+        "204":
+          description: Detection tag updated successfully
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserClassification'
-    patch:
-      summary: Partially update a user classification
+                $ref: '#/components/schemas/Error'
+  
+  /api/analyze:
+    post:
+      summary: Analyze a post
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/NewUserClassification'
+              $ref: '#/components/schemas/AnalyzeRequest'
       responses:
-        '200':
-          description: The updated classification
+        "200":
+          description: Post analyzed successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserClassification'
-    delete:
-      summary: Delete a user classification
-      responses:
-        '204':
-          description: Classification deleted
-  /posts:
+                $ref: '#/components/schemas/Detection'
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/sources/reddit/subreddits:
     get:
-      summary: List posts
+      summary: Get all subreddits
+      responses:
+        "200":
+          description: A list of subreddits
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SubredditSettings'
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/sources/reddit/subreddits/{subreddit}/add_profiles:
+    post:
+      summary: Add profiles
       parameters:
-        - name: ids
-          in: query
-          description: Comma-separated post IDs to filter by
+        - name: subreddit
+          in: path
+          required: true
           schema:
             type: string
-            example: "1,2,3"
-      responses:
-        '200':
-          description: A list of raw posts
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Post'
-  /analyze_posts:
-    post:
-      summary: Preview detections for a modified profile against given post IDs
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AnalyzePostsRequest'
+              type: object
+              properties:
+                profile_ids:
+                  type: array
+                  items:
+                    type: integer
+              required:
+                - profile_ids
+                    
       responses:
-        '200':
-          description: Generated detections and any errors
+        "204":
+          description: Profiles added successfully
+        "401":
+          description: Unauthorized
+        "404":
+          description: Profile not found
+        "500":
+          description: Internal server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AnalyzePostsResponse'
+                $ref: '#/components/schemas/Error'
+
+  /api/sources/reddit/subreddits/{subreddit}/remove_profiles:
+    post:
+      summary: Remove profiles
+      parameters:
+        - name: subreddit
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                profile_ids:
+                  type: array
+                  items:
+                    type: integer
+              required:
+                - profile_ids
+                    
+      responses:
+        "204":
+          description: Profiles removed successfully
+        "401":
+          description: Unauthorized
+        "404":
+          description: Profile not found
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/sources/reddit/subreddits_with_profile:
+    get:
+      summary: Get all subreddits by profile
+      parameters:
+        - name: profile_id
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: A list of subreddits
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SubredditSettings'
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
 components:
+  securitySchemes:
+    basicAuth:
+        type: http
+        scheme: basic
+        description: Basic authentication with username and password
+
   schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
     Profile:
       type: object
       properties:
@@ -256,189 +345,188 @@ components:
           type: integer
         name:
           type: string
-        subreddits:
-          type: array
-          items:
-            type: string
-        relevancy_filter_prompt:
+        created_at:
           type: string
-        properties_prompts:
+        updated_at:
+          type: string
+        default_settings:
+          $ref: '#/components/schemas/ProfileSettings'
+        sources_settings:
           type: object
           additionalProperties:
-            type: string
+            $ref: '#/components/schemas/ProfileSettings'
       required:
         - id
         - name
-        - subreddits
-        - relevancy_filter_prompt
-        - properties_prompts
+        - created_at
+        - updated_at
 
-    ProfileInput:
+    ProfileSettings:
+      type: object
+      properties:
+        relevancy_filter:
+          type: string
+        extracted_properties:
+          type: object
+          additionalProperties:
+            type: string
+        updated_at:
+          type: string
+        created_at:
+          type: string
+      required:
+        - relevancy_filter
+        - extracted_properties
+        - updated_at
+        - created_at
+    
+    ProfileUpdate:
       type: object
       properties:
         name:
           type: string
-        subreddits:
-          type: array
-          items:
-            type: string
-        relevancy_filter_prompt:
+        default_settings:
+          $ref: '#/components/schemas/ProfileSettingsUpdate'
+        sources_settings:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/ProfileSettingsUpdate'
+    
+    ProfileSettingsUpdate:
+      type: object
+      nullable: true
+      properties:
+        relevancy_filter:
           type: string
-        properties_prompts:
+        extracted_properties:
           type: object
           additionalProperties:
             type: string
-      required:
-        - name
-        - subreddits
-        - relevancy_filter_prompt
-        - properties_prompts
+            nullable: true
 
-    PostReddit:
+    DetectionListRequest:
       type: object
       properties:
-        permalink:
-          type: string
-        score:
+        last_seen_id:
           type: integer
-        num_comments:
+        limit:
           type: integer
-        subreddit:
-          type: string
-        comments:
+          default: 10
+        filter:
+          $ref: '#/components/schemas/DetectionFilter'
+    
+    DetectionFilter:
+      type: object
+      properties:
+        profiles:
           type: array
           items:
-            type: object
-      required:
-        - permalink
-        - score
-        - num_comments
-        - subreddit
-        - comments
-
-    Post:
+            type: integer
+        sources:
+          type: array
+          items:
+            type: string
+        is_relevant:
+          type: boolean
+        tags:
+          $ref: '#/components/schemas/DetectionTagsFilter'
+    
+    DetectionTagsFilter:
       type: object
       properties:
-        id:
+        relevancy_detected_correctly:
+          type: array
+          items:
+            type: boolean
+            x-go-type: '*bool'
+
+    DetectionTags:
+      type: object
+      properties:
+        relevancy_detected_correctly:
+          type: boolean
+
+    DetectionTagUpdateRequest:
+      type: object
+      properties:
+        detection_id:
           type: integer
-        title:
-          type: string
-        content:
-          type: string
-        reddit:
-          $ref: '#/components/schemas/PostReddit'
+        tags:
+          type: object
+          properties:
+            relevancy_detected_correctly:
+              type: boolean
+              nullable: true
       required:
-        - id
-        - title
-        - content
-        - reddit
+        - detection_id
+        - tags
 
     Detection:
       type: object
       properties:
         id:
           type: integer
+        source:
+          type: string
+        source_id:
+          type: string
         profile_id:
-          type: integer
-        post_id:
           type: integer
         is_relevant:
           type: boolean
-        extracted_properties:
+        properties:
           type: object
           additionalProperties:
             type: string
         created_at:
           type: string
-          format: date-time
       required:
         - id
+        - source
+        - source_id
         - profile_id
-        - post_id
         - is_relevant
-        - extracted_properties
+        - properties
         - created_at
 
-    DetectionWithPost:
-      allOf:
-        - $ref: '#/components/schemas/Detection'
-        - type: object
-          properties:
-            post:
-              $ref: '#/components/schemas/Post'
-          required:
-            - post
-
-    NewUserClassification:
+    ListedDetection:
       type: object
       properties:
-        profile_id:
-          type: integer
-        post_id:
-          type: integer
-        is_relevant:
-          type: boolean
+        detection:
+          $ref: '#/components/schemas/Detection'
+        source_post:
+          type: object
+        tags:
+          $ref: '#/components/schemas/DetectionTags'
+    
+    AnalyzeRequest:
+      type: object
+      properties:
+        source:
+          type: string
+        source_id:
+          type: string
+        relevancy_filter:
+          type: string
+        extracted_properties:
+          type: object
+          additionalProperties:
+            type: string
       required:
-        - profile_id
-        - post_id
-        - is_relevant
+        - source
+        - source_id
+        - relevancy_filter
+        - extracted_properties
 
-    UserClassification:
-      allOf:
-        - $ref: '#/components/schemas/NewUserClassification'
-        - type: object
-          properties:
-            created_at:
-              type: string
-              format: date-time
-          required:
-            - created_at
-
-    AnalyzePostsRequest:
+    SubredditSettings:
       type: object
       properties:
-        profile:
-          $ref: '#/components/schemas/ProfileInput'
-        post_ids:
+        subreddit:
+          type: string
+        profiles:
           type: array
           items:
             type: integer
       required:
-        - profile
-        - post_ids
-
-    AnalyzePostsResponse:
-      type: object
-      properties:
-        detections:
-          type: array
-          items:
-            type: object
-            properties:
-              post_id:
-                type: integer
-              is_relevant:
-                type: boolean
-              extracted_properties:
-                type: object
-                additionalProperties:
-                  type: string
-            required:
-              - post_id
-              - is_relevant
-              - extracted_properties
-        errors:
-          type: array
-          items:
-            type: object
-            properties:
-              post_id:
-                type: integer
-              error:
-                type: string
-            required:
-              - post_id
-              - error
-      required:
-        - detections
-        - errors
+        - subreddit
+        - profiles

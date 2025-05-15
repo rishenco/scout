@@ -1,3 +1,5 @@
+-- +goose Up
+
 -- Create audit schema if it doesn't exist
 CREATE SCHEMA IF NOT EXISTS audit;
 
@@ -14,3 +16,8 @@ CREATE TABLE IF NOT EXISTS audit.requests (
 CREATE INDEX IF NOT EXISTS idx_requests_service ON audit.requests (service);
 CREATE INDEX IF NOT EXISTS idx_requests_request_type ON audit.requests (request_type);
 CREATE INDEX IF NOT EXISTS idx_requests_created_at ON audit.requests (created_at);
+
+-- +goose Down
+
+DROP TABLE IF EXISTS audit.requests;
+DROP SCHEMA IF EXISTS audit;

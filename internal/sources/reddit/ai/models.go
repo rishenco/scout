@@ -1,4 +1,4 @@
-package analyzer
+package ai
 
 import "github.com/rishenco/scout/internal/sources/reddit"
 

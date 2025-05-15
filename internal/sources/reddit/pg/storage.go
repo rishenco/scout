@@ -208,24 +208,61 @@ func (s *Storage) GetPostsForScheduling(ctx context.Context, minScore int, limit
 	return posts, nil
 }
 
-func (s *Storage) GetPostByID(ctx context.Context, postID string) (post reddit.PostAndComments, err error) {
+func (s *Storage) GetRawPosts(ctx context.Context, postIDs []string) (posts []reddit.RawPostAndComments, err error) {
 	query := `
-		SELECT enriched_post_json
+		SELECT post_id, enriched_post_json
 		FROM reddit.posts
-		WHERE post_id = $1
+		WHERE post_id = ANY($1)
 	`
 
-	var enrichedPostJSON []byte
-
-	if err := s.pool.QueryRow(ctx, query, postID).Scan(&enrichedPostJSON); err != nil {
-		return reddit.PostAndComments{}, fmt.Errorf("scan: %w", err)
+	rows, err := s.pool.Query(ctx, query, postIDs)
+	if err != nil {
+		return nil, fmt.Errorf("query: %w", err)
 	}
 
-	if err := json.Unmarshal(enrichedPostJSON, &post); err != nil {
-		return reddit.PostAndComments{}, fmt.Errorf("unmarshal: %w", err)
+	defer rows.Close()
+
+	posts = make([]reddit.RawPostAndComments, 0)
+
+	for rows.Next() {
+		var rawPost reddit.RawPostAndComments
+
+		if err := rows.Scan(&rawPost.PostID, &rawPost.Data); err != nil {
+			return nil, fmt.Errorf("scan: %w", err)
+		}
+
+		posts = append(posts, rawPost)
 	}
 
-	return post, nil
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows error: %w", err)
+	}
+
+	return posts, nil
+}
+
+func (s *Storage) GetPosts(ctx context.Context, postIDs []string) (posts []reddit.PostAndComments, err error) {
+	rawPosts, err := s.GetRawPosts(ctx, postIDs)
+	if err != nil {
+		return nil, fmt.Errorf("get raw posts: %w", err)
+	}
+
+	posts = make([]reddit.PostAndComments, 0, len(rawPosts))
+
+	for _, rawPost := range rawPosts {
+		if len(rawPost.Data) == 0 {
+			continue
+		}
+
+		var post reddit.PostAndComments
+		if err := json.Unmarshal(rawPost.Data, &post); err != nil {
+			return nil, fmt.Errorf("unmarshal: %w", err)
+		}
+
+		posts = append(posts, post)
+	}
+
+	return posts, nil
 }
 
 func (s *Storage) GetSubredditsSettings(ctx context.Context, subreddits []string) (subredditsSettings []reddit.SubredditSettings, err error) {
@@ -293,4 +330,107 @@ func (s *Storage) GetSubredditsForScraping(ctx context.Context) (subreddits []st
 	}
 
 	return subreddits, nil
+}
+
+func (s *Storage) GetAllSubredditSettings(ctx context.Context) ([]reddit.SubredditSettings, error) {
+	query := `
+		SELECT subreddit, profiles
+		FROM reddit.subreddit_settings
+		ORDER BY subreddit
+	`
+
+	rows, err := s.pool.Query(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("query: %w", err)
+	}
+	defer rows.Close()
+
+	var settings []reddit.SubredditSettings
+
+	for rows.Next() {
+		var setting reddit.SubredditSettings
+
+		if err := rows.Scan(&setting.Subreddit, &setting.Profiles); err != nil {
+			return nil, fmt.Errorf("scan: %w", err)
+		}
+
+		settings = append(settings, setting)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows error: %w", err)
+	}
+
+	return settings, nil
+}
+
+func (s *Storage) GetAllSubredditSettingsWithProfileID(ctx context.Context, profileID int64) ([]reddit.SubredditSettings, error) {
+	query := `
+		SELECT subreddit, profiles
+		FROM reddit.subreddit_settings
+		WHERE $1 = ANY(profiles)
+		ORDER BY subreddit
+	`
+
+	rows, err := s.pool.Query(ctx, query, profileID)
+	if err != nil {
+		return nil, fmt.Errorf("query: %w", err)
+	}
+	defer rows.Close()
+
+	var settings []reddit.SubredditSettings
+
+	for rows.Next() {
+		var setting reddit.SubredditSettings
+
+		if err := rows.Scan(&setting.Subreddit, &setting.Profiles); err != nil {
+			return nil, fmt.Errorf("scan: %w", err)
+		}
+
+		settings = append(settings, setting)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows error: %w", err)
+	}
+
+	return settings, nil
+}
+
+func (s *Storage) AddProfilesToSubreddit(ctx context.Context, subreddit string, profileIDs []int64) error {
+	query := `
+		INSERT INTO reddit.subreddit_settings (subreddit, profiles)
+		VALUES ($1, $2)
+		ON CONFLICT (subreddit)
+		DO UPDATE SET profiles = (
+			SELECT ARRAY(
+				SELECT DISTINCT unnest(reddit.subreddit_settings.profiles || EXCLUDED.profiles)
+			)
+		)
+	`
+
+	if _, err := s.pool.Exec(ctx, query, subreddit, profileIDs); err != nil {
+		return fmt.Errorf("exec: %w", err)
+	}
+
+	return nil
+}
+
+func (s *Storage) RemoveProfilesFromSubreddit(ctx context.Context, subreddit string, profileIDs []int64) error {
+	query := `
+		UPDATE reddit.subreddit_settings
+		SET profiles = COALESCE((
+			SELECT array_agg(p)
+			FROM unnest(profiles) AS p
+			WHERE p != ALL($2)
+		), '{}')
+		WHERE subreddit = $1
+	`
+
+	_, err := s.pool.Exec(ctx, query, subreddit, profileIDs)
+	if err != nil {
+		return fmt.Errorf("exec: %w", err)
+	}
+
+	return nil
 }

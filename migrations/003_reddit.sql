@@ -1,3 +1,5 @@
+-- +goose Up
+
 -- Create reddit schema
 CREATE SCHEMA IF NOT EXISTS reddit;
 
@@ -22,3 +24,9 @@ CREATE TABLE IF NOT EXISTS reddit.subreddit_settings (
     profiles BIGINT[] NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 ); 
+
+-- +goose Down
+
+DROP TABLE IF EXISTS reddit.subreddit_settings;
+DROP TABLE IF EXISTS reddit.posts;
+DROP SCHEMA IF EXISTS reddit;
