@@ -5,11 +5,12 @@ import { Label } from "@/components/ui/label";
 import { PromptInput } from "@/components/PromptInput";
 import { PropertiesEditor } from "@/components/PropertiesEditor";
 import { SubredditSelector } from "@/components/SubredditSelector";
-import type { ProfileSettings, Profile } from "@/api/models";
+import type { ProfileSettings, Profile, ProfileUpdate } from "@/api/models";
+import { useSubredditsForProfile } from "@/api/hooks";
 
 type ProfileEditorProps = {
   initialProfile?: Partial<Profile>;
-  onSubmit: (profile: ProfileSettings) => void;
+  onSubmit: (profile: ProfileUpdate, subreddits: string[]) => void;
   isSubmitting?: boolean;
   className?: string;
 };
@@ -20,28 +21,40 @@ export function ProfileEditor({
   isSubmitting = false,
   className = "",
 }: ProfileEditorProps) {
+  const { data: loadedSubreddits } = useSubredditsForProfile(initialProfile?.id || -1)
   const [name, setName] = useState(initialProfile.name || "");
   const [subreddits, setSubreddits] = useState<string[]>(
-    initialProfile.subreddits || []
+    loadedSubreddits?.map((subreddit) => subreddit.subreddit) || [],
   );
   const [relevancyFilterPrompt, setRelevancyFilterPrompt] = useState(
-    initialProfile.relevancy_filter_prompt || ""
+    initialProfile.default_settings?.relevancy_filter || undefined
   );
-  const [propertiesPrompts, setPropertiesPrompts] = useState<Record<string, string>>(
-    initialProfile.properties_prompts || {}
+  const [propertiesPrompts, setPropertiesPrompts] = useState<Record<string, string> | undefined>(
+    initialProfile.default_settings?.extracted_properties || undefined
   );
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    const profileData: ProfileSettings = {
-      name,
-      subreddits,
-      relevancy_filter_prompt: relevancyFilterPrompt,
-      properties_prompts: propertiesPrompts,
-    };
-    
-    onSubmit(profileData);
+
+    const profileUpdate: ProfileUpdate = {};
+
+    if (name) {
+      profileUpdate.name = name;
+    }
+
+    if (relevancyFilterPrompt || propertiesPrompts) {
+      profileUpdate.default_settings = {};
+
+      if (relevancyFilterPrompt) {
+        profileUpdate.default_settings.relevancy_filter = relevancyFilterPrompt;
+      }
+
+      if (propertiesPrompts) {
+        profileUpdate.default_settings.extracted_properties = propertiesPrompts;
+      }
+    }
+
+    onSubmit(profileUpdate, subreddits);
   };
 
   return (
@@ -64,7 +77,7 @@ export function ProfileEditor({
 
       <PromptInput
         label="Relevancy Filter Prompt"
-        value={relevancyFilterPrompt}
+        value={relevancyFilterPrompt || ""}
         onChange={setRelevancyFilterPrompt}
         placeholder="Describe the criteria for considering a post relevant"
         description="This prompt will be used to determine if a post is relevant to your interests"
@@ -72,7 +85,7 @@ export function ProfileEditor({
       />
 
       <PropertiesEditor
-        properties={propertiesPrompts}
+        properties={propertiesPrompts || {}}
         onChange={setPropertiesPrompts}
       />
 

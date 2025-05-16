@@ -126,7 +126,15 @@ func (p *TaskProcessor) processTask(ctx context.Context) (anyTask bool, err erro
 	}
 
 	if !found {
-		return false, fmt.Errorf("profile not found")
+		p.logger.Error().
+			Int64("profile_id", task.ProfileID).
+			Msg("profile not found")
+
+		if err := p.taskQueue.Commit(ctx, task.ID); err != nil {
+			return false, fmt.Errorf("commit analysis task: %w", err)
+		}
+
+		return false, nil
 	}
 
 	profileSettings, found := profile.SourcesSettings[task.Source]

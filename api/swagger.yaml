@@ -166,8 +166,12 @@ paths:
             schema:
               $ref: '#/components/schemas/DetectionTagUpdateRequest'
       responses:
-        "204":
+        "200":
           description: Detection tag updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetectionTags'
         "401":
           description: Unauthorized
         "500":
@@ -358,8 +362,6 @@ components:
       required:
         - id
         - name
-        - created_at
-        - updated_at
 
     ProfileSettings:
       type: object
@@ -377,8 +379,6 @@ components:
       required:
         - relevancy_filter
         - extracted_properties
-        - updated_at
-        - created_at
     
     ProfileUpdate:
       type: object
@@ -387,11 +387,12 @@ components:
           type: string
         default_settings:
           $ref: '#/components/schemas/ProfileSettingsUpdate'
+          nullable: true
         sources_settings:
           type: object
           additionalProperties:
             $ref: '#/components/schemas/ProfileSettingsUpdate'
-    
+            nullable: true
     ProfileSettingsUpdate:
       type: object
       nullable: true
@@ -498,6 +499,8 @@ components:
           type: object
         tags:
           $ref: '#/components/schemas/DetectionTags'
+      required:
+        - detection
     
     AnalyzeRequest:
       type: object

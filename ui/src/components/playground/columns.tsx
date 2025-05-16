@@ -76,7 +76,7 @@ export const columns = (
     header: "New",
     cell: ({ row }) => {
       const newDetection = row.original.newDetection;
-      if (isAnalyzingPost(row.original.originalPost.post.id)) {
+      if (isAnalyzingPost(row.original.originalPost.detection.source_id)) {
         return <span className="inline-block animate-hourglass-turn">⌛</span>;
       }
       return getRelevancyBadge(newDetection?.is_relevant);
@@ -86,7 +86,7 @@ export const columns = (
     id: "actions",
     cell: ({ row }) => {
       const post = row.original
-      const postId = post.originalPost.post.id
+      const postId = post.originalPost.detection.source_id
 
       return (
         <Button 

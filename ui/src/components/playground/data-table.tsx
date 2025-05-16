@@ -67,7 +67,7 @@ export function DataTable<TData, TValue>({
     if (post.newDetection === undefined) {
       return "bg-muted";
     }
-    if (post.originalPost.user_classification?.is_relevant === post.newDetection.is_relevant) {
+    if (post.originalPost.tags?.relevancy_detected_correctly === post.newDetection.is_relevant) {
       return "bg-green-50 dark:bg-green-950/50";
     }
     return "bg-orange-50 dark:bg-orange-950/50";
