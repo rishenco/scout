@@ -1,6 +1,4 @@
-import type { Detection } from "@/api/models";
-
-import type { FeedPost } from "@/api/models";
+import type { Detection, ListedDetection } from "@/api/models";
 
 export interface BenchmarkStats {
     total: number;
@@ -10,6 +8,6 @@ export interface BenchmarkStats {
 }
 
 export interface PlaygroundPost {
-    originalPost: FeedPost;
+    originalPost: ListedDetection;
     newDetection?: Detection;
 }

@@ -1,71 +1,100 @@
-// Data models generated from openapi.yaml
+// Data models from the new API
 
-export interface ProfileSettings {
-  name: string;
-  subreddits: string[];
-  relevancy_filter_prompt: string;
-  properties_prompts: Record<string, string>;
-}
-
-export interface Profile extends ProfileSettings {
-  id: string;
-}
-
-export interface RedditPost {
-  permalink: string;
-  score: number;
-  num_comments: number;
-  subreddit: string;
-}
-
-export interface Post {
-  id: string;
-  title: string;
-  content: string;
-  reddit: RedditPost;
-}
-
-export interface Detection {
-  id: string;
-  profile_id: string;
-  post_id: string;
-  is_relevant: boolean;
-  extracted_properties: Record<string, string>;
-  created_at: string;
-}
-
-export interface UserClassification {
-  profile_id: string;
-  post_id: string;
-  is_relevant: boolean | null;
-}
-
-export interface FeedPost {
-  detection: Detection;
-  post: Post;
-  user_classification: UserClassification;
-}
-
-export interface FeedFilters {
-  is_relevant?: boolean;
-  has_user_classification?: boolean;
-  user_classification_value?: boolean;
-  newer?: string; // date-time
-  reddit?: {
-    subreddit?: string;
-    score_greater?: number;
-  };
-}
-
-export interface AnalyzePostsRequest {
-  profile: ProfileSettings;
-  post_ids: string[];
-}
-
-export interface AnalyzePostsResponse {
-  detections: Detection[];
-  errors: {
-    post_id: string;
+export interface Error {
     error: string;
-  }[];
+}
+
+// Profile-related models
+export interface ProfileSettings {
+    relevancy_filter: string;
+    extracted_properties: Record<string, string>;
+    updated_at?: string;
+    created_at?: string;
+}
+
+export interface Profile {
+    id: number;
+    name: string;
+    created_at?: string;
+    updated_at?: string;
+    default_settings?: ProfileSettings;
+    sources_settings?: Record<string, ProfileSettings>;
+}
+
+export interface ProfileSettingsUpdate {
+    relevancy_filter?: string;
+    extracted_properties?: Record<string, string | null>;
+}
+
+export interface ProfileUpdate {
+    name?: string;
+    default_settings?: ProfileSettingsUpdate | null;
+    sources_settings?: Record<string, ProfileSettingsUpdate | null>;
+}
+
+// Detection-related models
+export interface Detection {
+    id: number;
+    source: string;
+    source_id: string;
+    profile_id: number;
+    is_relevant: boolean;
+    properties: Record<string, string>;
+    created_at: string;
+}
+
+export interface DetectionTags {
+    relevancy_detected_correctly?: boolean;
+}
+
+export interface DetectionTagsUpdate {
+    relevancy_detected_correctly?: boolean | null;
+}
+
+export interface ListedDetection {
+    detection: Detection;
+    source_post?: Record<string, any>; // Generic object for source post
+    tags?: DetectionTags;
+}
+
+export interface DetectionTagsFilter {
+    relevancy_detected_correctly?: boolean[];
+}
+
+export interface DetectionFilter {
+    profiles?: number[];
+    sources?: string[];
+    is_relevant?: boolean;
+    tags?: DetectionTagsFilter;
+}
+
+export interface DetectionListRequest {
+    last_seen_id?: number;
+    limit?: number;
+    filter?: DetectionFilter;
+}
+
+export interface DetectionTagUpdateRequest {
+    detection_id: number;
+    tags: {
+        relevancy_detected_correctly?: boolean | null;
+    };
+}
+
+// Analyze-related models
+export interface AnalyzeRequest {
+    source: string;
+    source_id: string;
+    relevancy_filter: string;
+    extracted_properties: Record<string, string>;
+}
+
+// Subreddit-related models
+export interface SubredditSettings {
+    subreddit: string;
+    profiles: number[];
+}
+
+export interface SubredditProfilesRequest {
+    profile_ids: number[];
 } 

@@ -1,10 +1,10 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
-import type { FeedFilters } from '@/api/models'
+import type { DetectionFilter } from '@/api/models'
 
 interface FeedFiltersProps {
-  filters: FeedFilters
-  onFiltersChange: (filters: FeedFilters) => void
+  filters: DetectionFilter
+  onFiltersChange: (filters: DetectionFilter) => void
 }
 
 export function FeedFilters({ filters, onFiltersChange }: FeedFiltersProps) {

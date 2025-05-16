@@ -33,3 +33,9 @@ open-swagger:
 .PHONY: generate
 generate:
 	go generate ./...
+	cd ui && \
+	npx @hey-api/openapi-ts \
+		--input ../api/swagger.yaml \
+		--output ./src/api/generated \
+		--client @hey-api/client-axios && \
+	cd ..

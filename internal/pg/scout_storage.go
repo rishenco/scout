@@ -380,19 +380,29 @@ func (s *ScoutStorage) UpdateProfile(ctx context.Context, update models.ProfileU
 	return nil
 }
 
-func (s *ScoutStorage) UpdateTags(ctx context.Context, detectionID int64, update models.DetectionTagsUpdate) error {
+func (s *ScoutStorage) UpdateTags(ctx context.Context, detectionID int64, update models.DetectionTagsUpdate) (models.DetectionTags, error) {
 	if !update.RelevancyDetectedCorrectly.IsSet() {
-		return nil
+		return models.DetectionTags{}, nil
 	}
 
-	query := `UPDATE scout.detection_tags SET relevancy_detected_correctly = $1 WHERE detection_id = $2`
+	query := `
+		UPDATE scout.detection_tags
+		SET relevancy_detected_correctly = $1
+		WHERE detection_id = $2
+		RETURNING relevancy_detected_correctly
+	`
 
-	_, err := s.pool.Exec(ctx, query, update.RelevancyDetectedCorrectly.Value, detectionID)
-	if err != nil {
-		return fmt.Errorf("update scout.detection_tags: %w", err)
+	row := s.pool.QueryRow(ctx, query, update.RelevancyDetectedCorrectly.Value, detectionID)
+
+	var relevancyDetectedCorrectly *bool
+
+	if err := row.Scan(&relevancyDetectedCorrectly); err != nil {
+		return models.DetectionTags{}, fmt.Errorf("scan: %w", err)
 	}
 
-	return nil
+	return models.DetectionTags{
+		RelevancyDetectedCorrectly: relevancyDetectedCorrectly,
+	}, nil
 }
 
 func (s *ScoutStorage) GetDetectionTags(ctx context.Context, detectionIDs []int64) ([]models.DetectionTags, error) {

@@ -2,12 +2,14 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import type { Profile } from '@/api/models'
 import { Button } from '@/components/ui/button'
 import { Link, useNavigate } from 'react-router-dom'
-
+import { useSubredditsForProfile } from '@/api/hooks'
 interface ProfileCardProps {
   profile: Profile
 }
 
 export function ProfileCard({ profile }: ProfileCardProps) {
+  const { data: subreddits } = useSubredditsForProfile(profile.id)
+
   const navigate = useNavigate()
 
   const handleCardClick = () => {
@@ -22,16 +24,16 @@ export function ProfileCard({ profile }: ProfileCardProps) {
         </CardHeader>
         <CardContent className="flex-grow">
           <div className="flex flex-wrap gap-2">
-            {profile.subreddits.map((subreddit) => (
+            {subreddits?.map((subreddit) => (
               <a
-                key={subreddit}
-                href={`https://www.reddit.com/r/${subreddit}`}
+                key={subreddit.subreddit}
+                href={`https://www.reddit.com/r/${subreddit.subreddit}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={(e) => e.stopPropagation()}
                 className="bg-accent text-accent-foreground rounded px-2 py-1 text-sm hover:bg-accent/80"
               >
-                r/{subreddit}
+                r/{subreddit.subreddit}
               </a>
             ))}
           </div>
