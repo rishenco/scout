@@ -6,31 +6,39 @@ import { ProfileEditor } from '@/components/ProfileEditor'
 import { PlaygroundPostList } from '@/components/playground/PlaygroundPostList'
 import { 
   useProfile, 
-  useUpdateProfile
+  useUpdateProfile,
+  useAddProfilesToSubreddit
 } from '@/api/hooks'
-import type { ProfileSettings } from '@/api/models'
+import type { ProfileSettings, Profile, ProfileUpdate } from '@/api/models'
 import { Skeleton } from '@/components/ui/skeleton'
 
 export default function EditProfile() {
   const { profileId } = useParams<{ profileId: string }>()
+  const numberProfileId = parseInt(profileId || '0')
   
-  const { data: profile, isLoading: isLoadingProfile } = useProfile(profileId || '')
-  const [draftProfile, setDraftProfile] = useState<ProfileSettings | null>(profile as ProfileSettings)
+  const { data: profile, isLoading: isLoadingProfile } = useProfile(numberProfileId)
   const { mutate: updateProfile, isPending: isUpdatingProfile } = useUpdateProfile()
+  const {mutate: addProfilesToSubreddit, isPending: isAddingProfilesToSubreddit} = useAddProfilesToSubreddit()
 
-  const handleUpdateProfile = (profileData: ProfileSettings) => {
+  const handleUpdateProfile = (update: ProfileUpdate, subreddits: string[]) => {
     if (!profileId) return
 
     // Store draft profile for testing
-    setDraftProfile(profileData)
     updateProfile(
-      { id: profileId, settings: profileData },
+      {id: numberProfileId, update: update},
       {
         onError: (err) => {
           console.log(`Failed to update profile ${err.message}`)
         },
       }
     )
+
+    for (const subreddit of subreddits) {
+      addProfilesToSubreddit({
+        subreddit,
+        profileIds: [numberProfileId],
+      })
+    }
   }
 
   return (
@@ -75,7 +83,7 @@ export default function EditProfile() {
           {profileId ? (
             <PlaygroundPostList
               profileId={profileId}
-              profileSettings={draftProfile || profile as ProfileSettings}
+              profileSettings={profile?.default_settings as ProfileSettings}
             />
           ) : (
             <div className="p-4 bg-orange-100 dark:bg-orange-900/20 text-orange-800 dark:text-orange-400 rounded-md">

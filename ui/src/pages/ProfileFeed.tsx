@@ -2,11 +2,12 @@ import { useParams, Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, Settings } from 'lucide-react'
 import { PostFeed } from '@/components/PostFeed'
-import { useProfile } from '@/api/hooks'
+import { useProfile, useSubredditsForProfile } from '@/api/hooks'
 
 export default function ProfileFeed() {
   const { profileId } = useParams<{ profileId: string }>()
-  const { data: profile } = useProfile(profileId || '')
+  const { data: profile } = useProfile(parseInt(profileId || '0'))
+  const { data: subreddits } = useSubredditsForProfile(parseInt(profileId || '0'))
 
   if (!profileId) {
     return <div>Profile ID not found!</div>
@@ -33,7 +34,7 @@ export default function ProfileFeed() {
       
       {profile && (
         <div className="mb-4">
-          <p className="text-muted-foreground">Subreddits: {profile.subreddits.join(', ')}</p>
+          <p className="text-muted-foreground">Subreddits: {subreddits?.map(subreddit => subreddit.subreddit).join(', ')}</p>
         </div>
       )}
       

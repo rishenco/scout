@@ -22,7 +22,7 @@ type scout interface {
 	GetProfile(ctx context.Context, id int64) (profile models.Profile, found bool, err error)
 	CreateProfile(ctx context.Context, profile models.Profile) (id int64, err error)
 	UpdateProfile(ctx context.Context, update models.ProfileUpdate) error
-	UpdateTags(ctx context.Context, detectionID int64, update models.DetectionTagsUpdate) error
+	UpdateTags(ctx context.Context, detectionID int64, update models.DetectionTagsUpdate) (models.DetectionTags, error)
 	GetDetectionTags(ctx context.Context, detectionIDs []int64) ([]models.DetectionTags, error)
 	GetSourcePosts(ctx context.Context, source string, sourceIDs []string) ([]models.SourcePost, error)
 	ListDetections(ctx context.Context, query models.DetectionQuery) ([]models.DetectionRecord, error)
@@ -206,7 +206,7 @@ func (s *Server) PostApiDetectionsList(ctx context.Context, request oapi.PostApi
 
 	for _, detection := range detections {
 		oapiDetection := oapi.ListedDetection{
-			Detection: &oapi.Detection{
+			Detection: oapi.Detection{
 				CreatedAt:  detection.CreatedAt.Format(time.RFC3339),
 				Id:         int(detection.ID),
 				IsRelevant: detection.IsRelevant,
@@ -237,7 +237,7 @@ func (s *Server) PostApiDetectionsList(ctx context.Context, request oapi.PostApi
 
 // PutApiDetectionsTags implements oapi.StrictServerInterface.
 func (s *Server) PutApiDetectionsTags(ctx context.Context, request oapi.PutApiDetectionsTagsRequestObject) (oapi.PutApiDetectionsTagsResponseObject, error) {
-	err := s.scout.UpdateTags(
+	detectionTags, err := s.scout.UpdateTags(
 		ctx,
 		int64(request.Body.DetectionId),
 		models.DetectionTagsUpdate{
@@ -249,7 +249,7 @@ func (s *Server) PutApiDetectionsTags(ctx context.Context, request oapi.PutApiDe
 		return oapi.PutApiDetectionsTags500JSONResponse{Error: err.Error()}, nil
 	}
 
-	return oapi.PutApiDetectionsTags204Response{}, nil
+	return oapi.PutApiDetectionsTags200JSONResponse(detectionTagsFromModel(detectionTags)), nil
 }
 
 // PostApiProfiles implements oapi.StrictServerInterface.
@@ -302,12 +302,12 @@ func (s *Server) PostApiSourcesRedditSubredditsSubredditRemoveProfiles(ctx conte
 
 func profileFromModel(profile models.Profile) oapi.Profile {
 	oapiProfile := oapi.Profile{
-		CreatedAt:       profile.CreatedAt.Format(time.RFC3339),
+		CreatedAt:       lo.ToPtr(profile.CreatedAt.Format(time.RFC3339)),
 		Id:              int(profile.ID),
 		Name:            profile.Name,
 		DefaultSettings: nil,
 		SourcesSettings: &map[string]oapi.ProfileSettings{},
-		UpdatedAt:       profile.UpdatedAt.Format(time.RFC3339),
+		UpdatedAt:       lo.ToPtr(profile.UpdatedAt.Format(time.RFC3339)),
 	}
 
 	if profile.DefaultSettings != nil {
@@ -324,8 +324,8 @@ func profileSettingsFromModel(settings models.ProfileSettings) oapi.ProfileSetti
 	return oapi.ProfileSettings{
 		ExtractedProperties: settings.ExtractedProperties,
 		RelevancyFilter:     settings.RelevancyFilter,
-		CreatedAt:           settings.CreatedAt.Format(time.RFC3339),
-		UpdatedAt:           settings.UpdatedAt.Format(time.RFC3339),
+		CreatedAt:           lo.ToPtr(settings.CreatedAt.Format(time.RFC3339)),
+		UpdatedAt:           lo.ToPtr(settings.UpdatedAt.Format(time.RFC3339)),
 	}
 }
 
@@ -333,6 +333,12 @@ func subredditSettingsFromModel(settings reddit.SubredditSettings) oapi.Subreddi
 	return oapi.SubredditSettings{
 		Subreddit: settings.Subreddit,
 		Profiles:  lo.Map(settings.Profiles, func(id int64, _ int) int { return int(id) }),
+	}
+}
+
+func detectionTagsFromModel(tags models.DetectionTags) oapi.DetectionTags {
+	return oapi.DetectionTags{
+		RelevancyDetectedCorrectly: tags.RelevancyDetectedCorrectly,
 	}
 }
 

@@ -4,18 +4,34 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { ProfileEditor } from '@/components/ProfileEditor';
 import { useCreateProfile } from '@/api/hooks';
-import type { ProfileSettings } from '@/api/models';
+import type { ProfileSettings, Profile, ProfileUpdate } from '@/api/models';
 
 export default function NewProfile() {
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
   const { mutate: createProfile, isPending } = useCreateProfile();
 
-  const handleCreateProfile = (profileData: ProfileSettings) => {
+  const handleCreateProfile = (profileData: ProfileUpdate) => {
+    const profile: Profile = {
+      id: 0,
+      name: profileData.name || "New Profile",
+    }
+
+    if (profileData.default_settings) {
+      profile.default_settings = {
+        relevancy_filter: profileData.default_settings.relevancy_filter || "",
+        extracted_properties: profileData.default_settings.extracted_properties || {},
+      };
+    }
+
+    if (profileData.sources_settings) {
+      profile.sources_settings = profileData.sources_settings;
+    }
+
     setError(null);
-    createProfile(profileData, {
-      onSuccess: (profile) => {
-        navigate(`/profiles/${profile.id}`);
+    createProfile(profile, {
+      onSuccess: (id) => {
+        navigate(`/profiles/${id}`);
       },
       onError: (err) => {
         setError(`Failed to create profile: ${err.message}`);

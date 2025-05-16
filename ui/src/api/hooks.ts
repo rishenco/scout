@@ -1,130 +1,198 @@
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
 import type { InfiniteData } from '@tanstack/react-query';
+import apiClient from './client';
 import type {
-  ProfileSettings,
   Profile,
-  UserClassification,
-  AnalyzePostsRequest,
-  AnalyzePostsResponse,
-  FeedPost,
-  FeedFilters
+  ProfileUpdate,
+  Detection,
+  DetectionFilter,
+  DetectionTags,
+  DetectionTagsUpdate,
+  ListedDetection,
+  AnalyzeRequest,
+  SubredditSettings
 } from './models';
-import {
-  getProfiles,
-  getProfile,
-  createProfile,
-  updateProfile,
-  deleteProfile,
-  getFeed,
-  updateUserClassification,
-  getUserClassification,
-  analyzePosts,
-} from './services';
 
 // Profiles
 export function useProfiles() {
-  return useQuery<Profile[], Error, Profile[]>({
+  return useQuery<Profile[], Error>({
     queryKey: ['profiles'],
-    queryFn: getProfiles,
+    queryFn: () => apiClient.profiles.getProfiles(),
   });
 }
 
-export function useProfile(id: string) {
-  return useQuery<Profile, Error, Profile>({
+export function useProfile(id: number) {
+  return useQuery<Profile, Error>({
     queryKey: ['profiles', id],
-    queryFn: () => getProfile(id),
+    queryFn: () => apiClient.profiles.getProfile(id),
     enabled: !!id,
   });
 }
 
 export function useCreateProfile() {
   const queryClient = useQueryClient();
-  return useMutation<Profile, Error, ProfileSettings>({
-    mutationFn: createProfile,
-    onSuccess: (data) => {
+  return useMutation<number, Error, Profile>({
+    mutationFn: (profile) => apiClient.profiles.createProfile(profile),
+    onSuccess: (id, profile) => {
       queryClient.invalidateQueries({ queryKey: ['profiles'] });
-      queryClient.setQueryData(['profiles', data.id], data);
+      // queryClient.setQueryData(['profiles', data.id], data);
+      // We don't have the complete data, so we just invalidate the cache
     },
   });
 }
 
 export function useUpdateProfile() {
   const queryClient = useQueryClient();
-  return useMutation<Profile, Error, { id: string; settings: ProfileSettings }>({
-    mutationFn: ({ id, settings }) => updateProfile(id, settings),
-    onSuccess: (data, variables) => {
+  return useMutation<void, Error, { id: number; update: ProfileUpdate }>({
+    mutationFn: ({ id, update }) => apiClient.profiles.updateProfile(id, update),
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['profiles'] });
-      queryClient.setQueryData(['profiles', variables.id], data);
+      queryClient.invalidateQueries({ queryKey: ['profiles', variables.id] });
+      // queryClient.setQueryData(['profiles', variables.id], data);
     },
   });
 }
 
 export function useDeleteProfile() {
   const queryClient = useQueryClient();
-  return useMutation<void, Error, string>({
-    mutationFn: deleteProfile,
-    onSuccess: (_, profileId) => {
+  return useMutation<void, Error, number>({
+    mutationFn: (id) => apiClient.profiles.deleteProfile(id),
+    onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: ['profiles'] });
-      queryClient.removeQueries({ queryKey: ['profiles', profileId] });
+      queryClient.removeQueries({ queryKey: ['profiles', id] });
     },
   });
 }
 
-const FEED_PAGE_SIZE = 10;
+const DETECTION_PAGE_SIZE = 10;
 
-export function useInfiniteFeed(params: {
-  profile_id: string;
-  filters?: FeedFilters;
-  order?: 'new' | 'max_score' | 'relevant';
+// Detections (replaces useInfiniteFeed)
+export function useInfiniteDetections(params: {
+  profiles?: number[];
+  isRelevant?: boolean;
+  sources?: string[];
+  tags?: {
+    relevancy_detected_correctly?: boolean[];
+  }
 }) {
-  return useInfiniteQuery<FeedPost[], Error, InfiniteData<FeedPost[]>, [string, typeof params], number>({
-    queryKey: ['feed', params],
-    queryFn: ({ pageParam = 0 }) => getFeed({ ...params, offset: pageParam * FEED_PAGE_SIZE, limit: FEED_PAGE_SIZE }),
-    initialPageParam: 0,
-    getNextPageParam: (lastPage, allPages, lastPageParam) => {
-      if (lastPage.length < FEED_PAGE_SIZE) {
+  return useInfiniteQuery<ListedDetection[], Error>({
+    queryKey: ['detections', params],
+    queryFn: ({ pageParam }) => {
+      const filter: DetectionFilter = {};
+      
+      if (params.profiles) {
+        filter.profiles = params.profiles;
+      }
+      
+      if (params.isRelevant !== undefined) {
+        filter.is_relevant = params.isRelevant;
+      }
+      
+      if (params.sources) {
+        filter.sources = params.sources;
+      }
+
+      if (params.tags) {
+        filter.tags = params.tags;
+      }
+      
+      return apiClient.detections.listDetections({
+        lastSeenId: pageParam as number | undefined,
+        limit: DETECTION_PAGE_SIZE,
+        filter
+      });
+    },
+    initialPageParam: undefined as number | undefined,
+    getNextPageParam: (lastPage) => {
+      if (lastPage.length < DETECTION_PAGE_SIZE || !lastPage.length) {
         return undefined;
       }
-      return lastPageParam + 1;
+      
+      const lastDetection = lastPage[lastPage.length - 1];
+      return lastDetection?.detection?.id;
     },
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 }
 
-export function useUpdateUserClassification() {
+// Detection tags (replaces useUpdateUserClassification)
+export function useUpdateDetectionTags() {
   const queryClient = useQueryClient();
-  return useMutation<UserClassification, Error, UserClassification>({
-    mutationFn: updateUserClassification,
-    onSuccess: (data) => {
-      queryClient.setQueryData(['user_classification', data.profile_id, data.post_id], data);
-      queryClient.setQueryData<InfiniteData<FeedPost[]>>(['feed', { profile_id: data.profile_id }], (oldData) => {
-        if (!oldData) return oldData;
-        return {
-          ...oldData,
-          pages: oldData.pages.map(page => page.map(feedPost => {
-            if (feedPost.post.id === data.post_id) {
-              return { ...feedPost, user_classification: data };
-            }
-            return feedPost;
-          }))
-        };
-      });
-      queryClient.invalidateQueries({ queryKey: ['feed', { profile_id: data.profile_id }] });
+  return useMutation<DetectionTags, Error, { detectionId: number; tags: DetectionTagsUpdate }>({
+    mutationFn: ({ detectionId, tags }) => apiClient.detections.updateTags(detectionId, tags),
+    onSuccess: (updatedTags, { detectionId }) => {
+      // Update the cached detections that contain this detection
+      queryClient.setQueriesData<InfiniteData<ListedDetection[]>>(
+        { queryKey: ['detections'] },
+        (oldData) => {
+          if (!oldData) return oldData;
+          
+          // Update the tags in all pages that contain this detection
+          return {
+            ...oldData,
+            pages: oldData.pages.map(page => 
+              page.map(listedDetection => {
+                if (listedDetection.detection && listedDetection.detection.id === detectionId) {
+                  return {
+                    ...listedDetection,
+                    tags: updatedTags
+                  };
+                }
+                return listedDetection;
+              })
+            )
+          };
+        }
+      );
     },
   });
 }
 
-export function useUserClassification(profileId: string, postId: string) {
-  return useQuery<UserClassification, Error, UserClassification>({
-    queryKey: ['user_classification', profileId, postId],
-    queryFn: () => getUserClassification(profileId, postId),
-    enabled: !!profileId && !!postId,
+// Analyze post
+export function useAnalyzePost() {
+  return useMutation<Detection, Error, AnalyzeRequest>({
+    mutationFn: (request) => apiClient.analysis.analyzePost(request),
   });
 }
 
-// Analyze Posts
-export function useAnalyzePosts() {
-  return useMutation<AnalyzePostsResponse, Error, AnalyzePostsRequest>({
-    mutationFn: analyzePosts,
+// Subreddits
+export function useSubreddits() {
+  return useQuery<SubredditSettings[], Error>({
+    queryKey: ['subreddits'],
+    queryFn: () => apiClient.subreddits.getAllSubreddits(),
+  });
+}
+
+export function useSubredditsForProfile(profileId: number) {
+  return useQuery<SubredditSettings[], Error>({
+    queryKey: ['subreddits', 'profile', profileId],
+    queryFn: async () => {
+      if (profileId < 0) {
+        return [];
+      }
+      
+      return await apiClient.subreddits.getSubredditsForProfile(profileId)
+    },
+    enabled: !!profileId,
+  });
+}
+
+export function useAddProfilesToSubreddit() {
+  const queryClient = useQueryClient();
+  return useMutation<void, Error, { subreddit: string; profileIds: number[] }>({
+    mutationFn: ({ subreddit, profileIds }) => apiClient.subreddits.addProfilesToSubreddit(subreddit, profileIds),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['subreddits'] });
+    },
+  });
+}
+
+export function useRemoveProfilesFromSubreddit() {
+  const queryClient = useQueryClient();
+  return useMutation<void, Error, { subreddit: string; profileIds: number[] }>({
+    mutationFn: ({ subreddit, profileIds }) => apiClient.subreddits.removeProfilesFromSubreddit(subreddit, profileIds),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['subreddits'] });
+    },
   });
 } 
