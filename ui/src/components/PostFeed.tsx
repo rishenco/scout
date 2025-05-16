@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react'
 import { useInView } from 'react-intersection-observer'
 import { FeedFilters as FeedFiltersComponent} from '@/components/FeedFilters'
 import { PostCard } from '@/components/PostCard'
-import { useInfiniteFeed } from '@/api/hooks'
-import type { FeedFilters } from '@/api/models'
+import { useInfiniteDetections } from '@/api/hooks'
+import type { DetectionFilter } from '@/api/models'
 
 interface PostFeedProps {
   profileId: string
@@ -11,8 +11,9 @@ interface PostFeedProps {
 
 
 export function PostFeed({ profileId }: PostFeedProps) {
-  const [filters, setFilters] = useState<FeedFilters>({
+  const [filters, setFilters] = useState<DetectionFilter>({
     is_relevant: true,
+    profiles: [parseInt(profileId)],
   })
   
   // Setup infinite scroll with intersection observer
@@ -27,11 +28,7 @@ export function PostFeed({ profileId }: PostFeedProps) {
     isFetchingNextPage, 
     fetchNextPage, 
     hasNextPage 
-  } = useInfiniteFeed({
-    profile_id: profileId,
-    filters: filters,
-    order: 'new', 
-  });
+  } = useInfiniteDetections(filters);
 
   // Flatten the pages data from the hook into a single array
   const allPosts = data?.pages.flatMap(page => page) ?? []
@@ -43,7 +40,7 @@ export function PostFeed({ profileId }: PostFeedProps) {
   }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage])
   
   // Handle filter changes - changing filters automatically triggers refetch via queryKey
-  const handleFiltersChange = (newFilters: FeedFilters) => {
+  const handleFiltersChange = (newFilters: DetectionFilter) => {
     setFilters(newFilters)
   }
   
@@ -59,9 +56,7 @@ export function PostFeed({ profileId }: PostFeedProps) {
         {allPosts.map(feedPost => (
           <PostCard 
             key={feedPost.detection.id} // Use detection ID as key
-            detection={feedPost.detection} 
-            post={feedPost.post}
-            userClassification={feedPost.user_classification}
+            detection={feedPost}
           />
         ))}
         

@@ -1,30 +1,29 @@
 import { ThumbsUp, ThumbsDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import type { Detection, UserClassification as UserClassificationType } from '@/api/models'
-import { useUpdateUserClassification } from '@/api/hooks'
+import type { ListedDetection, DetectionTagUpdateRequest } from '@/api/models'
+import { useUpdateDetectionTags } from '@/api/hooks'
 
 interface PostReactionProps {
-  detection: Detection
-  userClassification?: UserClassificationType
+  detection: ListedDetection
 }
 
-export function PostReaction({ detection, userClassification }: PostReactionProps) {
+export function PostReaction({ detection }: PostReactionProps) {
   // will be updated with cache, no need to update manually
-  const isRelevant = userClassification?.is_relevant === null ? undefined : userClassification?.is_relevant
+  const isRelevant = detection.tags?.relevancy_detected_correctly === null ? undefined : detection.tags?.relevancy_detected_correctly
 
-  const { mutate: updateUserClassification, isPending: isLoading } = useUpdateUserClassification()
+  const { mutate: updateDetectionTags, isPending: isLoading } = useUpdateDetectionTags()
 
   const handleReaction = (relevant: boolean) => {
     const currentReactionIsSame = isRelevant === relevant;
 
-    // Prepare classification data for API
-    const newClassificationData: UserClassificationType = {
-      profile_id: detection.profile_id,
-      post_id: detection.post_id,
-      is_relevant: currentReactionIsSame ? null : relevant,
-    };
-
-    updateUserClassification(newClassificationData);
+    updateDetectionTags(
+      {
+        detectionId: detection.detection.id,
+        tags: {
+          relevancy_detected_correctly: currentReactionIsSame ? null : relevant,
+        },
+      }
+    );
   }
 
   return (

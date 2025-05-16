@@ -18,7 +18,7 @@ type storage interface {
 	SaveDetection(ctx context.Context, record models.DetectionRecord) error
 	ListDetections(ctx context.Context, query models.DetectionQuery) ([]models.DetectionRecord, error)
 	GetDetectionTags(ctx context.Context, detectionIDs []int64) ([]models.DetectionTags, error)
-	UpdateTags(ctx context.Context, detectionID int64, update models.DetectionTagsUpdate) error
+	UpdateTags(ctx context.Context, detectionID int64, update models.DetectionTagsUpdate) (models.DetectionTags, error)
 }
 
 type taskAdder interface {
@@ -109,7 +109,7 @@ func (s *Scout) UpdateProfile(ctx context.Context, update models.ProfileUpdate) 
 	return s.storage.UpdateProfile(ctx, update)
 }
 
-func (s *Scout) UpdateTags(ctx context.Context, detectionID int64, update models.DetectionTagsUpdate) error {
+func (s *Scout) UpdateTags(ctx context.Context, detectionID int64, update models.DetectionTagsUpdate) (models.DetectionTags, error) {
 	return s.storage.UpdateTags(ctx, detectionID, update)
 }
 

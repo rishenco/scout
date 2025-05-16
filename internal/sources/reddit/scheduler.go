@@ -118,5 +118,13 @@ func (s *Scheduler) schedulePosts(ctx context.Context) error {
 		return fmt.Errorf("schedule analysis: %w", err)
 	}
 
+	postIDs := lo.Map(redditPosts, func(post PostAndComments, _ int) string {
+		return post.Post.ID
+	})
+
+	if err := s.storage.MarkPostsAsScheduled(ctx, postIDs); err != nil {
+		return fmt.Errorf("mark posts as scheduled: %w", err)
+	}
+
 	return nil
 }

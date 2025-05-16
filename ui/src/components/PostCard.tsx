@@ -2,23 +2,21 @@ import { useState } from 'react'
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ArrowUpIcon, MessageSquareIcon, ExternalLinkIcon } from 'lucide-react'
-import type { Detection, Post, UserClassification } from '@/api/models'
+import type { Detection, ListedDetection, DetectionTags } from '@/api/models'
 import { ExtractedProperties } from '@/components/ExtractedProperties'
 import { RelevancyBadge } from '@/components/RelevancyBadge'
 import { PostReaction } from '@/components/PostReaction'
 import { PostDialog } from '@/components/PostDialog'
 
 interface PostCardProps {
-  detection?: Detection
-  post?: Post
-  userClassification?: UserClassification
+  detection?: ListedDetection
   isLoading?: boolean
 }
 
-export function PostCard({ detection, post, userClassification, isLoading = false }: PostCardProps) {
+export function PostCard({ detection, isLoading = false }: PostCardProps) {
   const [dialogOpen, setDialogOpen] = useState(false)
 
-  if (isLoading || !detection || !post) {
+  if (isLoading || !detection?.detection || !detection?.source_post) {
     return (
       <Card className="w-full mb-4">
         <CardHeader>
@@ -38,7 +36,7 @@ export function PostCard({ detection, post, userClassification, isLoading = fals
     )
   }
 
-  const { is_relevant, extracted_properties } = detection;
+  const { is_relevant, properties } = detection.detection;
 
   return (
     <>
@@ -47,45 +45,44 @@ export function PostCard({ detection, post, userClassification, isLoading = fals
           <div className="flex justify-between items-start">
             <div>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span>r/{post.reddit.subreddit}</span>
+                <span>r/{detection.source_post.subreddit}</span>
               </div>
-              <h2 className="text-xl font-semibold mt-1">{post.title}</h2>
+              <h2 className="text-xl font-semibold mt-1">{detection.source_post.title}</h2>
             </div>
             <div className="flex items-center gap-2 absolute top-2 right-2">
               <RelevancyBadge isRelevant={is_relevant} />
               <div onClick={(e) => e.stopPropagation()}>
                 <PostReaction
                   detection={detection}
-                  userClassification={userClassification}
                 />
               </div>
             </div>
           </div>
         </CardHeader>
         <CardContent className="py-2 px-4">
-          {extracted_properties && Object.keys(extracted_properties).length > 0 && (
+          {properties && Object.keys(properties).length > 0 && (
             <ExtractedProperties
-              properties={extracted_properties}
+              properties={properties}
               className="mb-2"
             />
           )}
           
           <div className="text-sm line-clamp-2 text-muted-foreground">
-            {post.content}
+            {detection.source_post.content}
           </div>
         </CardContent>
         <CardFooter className="flex justify-between py-2 px-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-1">
               <ArrowUpIcon className="h-4 w-4" />
-              <span>{post.reddit.score}</span>
+              <span>{detection.source_post.score}</span>
             </div>
             <div className="flex items-center gap-1">
               <MessageSquareIcon className="h-4 w-4" />
-              <span>{post.reddit.num_comments} comments</span>
+              <span>{detection.source_post.num_comments} comments</span>
             </div>
             <a
-              href={`https://reddit.com${post.reddit.permalink}`}
+              href={`https://reddit.com${detection.source_post.permalink}`}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1 text-xs underline hover:text-primary ml-2"
@@ -100,11 +97,9 @@ export function PostCard({ detection, post, userClassification, isLoading = fals
         </CardFooter>
       </Card>
 
-      {detection && post && (
+      {detection && (
         <PostDialog 
           detection={detection}
-          post={post}
-          userClassification={userClassification}
           open={dialogOpen}
           onOpenChange={setDialogOpen}
         />
