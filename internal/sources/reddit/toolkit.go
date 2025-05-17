@@ -17,6 +17,7 @@ type toolkitStorage interface {
 	GetAllSubredditSettingsWithProfileID(ctx context.Context, profileID int64) ([]SubredditSettings, error)
 	AddProfilesToSubreddit(ctx context.Context, subreddit string, profileIDs []int64) error
 	RemoveProfilesFromSubreddit(ctx context.Context, subreddit string, profileIDs []int64) error
+	RemoveProfileFromAllSubredditSettings(ctx context.Context, profileID int64) error
 	// GetPostIDsWithSubreddits returns a list of ids of posts from subreddits.
 	//
 	// subreddits - subreddits to get post IDs for
@@ -139,4 +140,8 @@ func (t *Toolkit) GetScheduledSourceIDs(ctx context.Context, profileIDs []int64,
 	}
 
 	return lo.Keys(sourceIDs), nil
+}
+
+func (t *Toolkit) DeleteProfile(ctx context.Context, profileID int64) error {
+	return t.storage.RemoveProfileFromAllSubredditSettings(ctx, profileID)
 }

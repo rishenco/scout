@@ -27,6 +27,7 @@ type taskAdder interface {
 
 type SourceToolkit interface {
 	Analyze(ctx context.Context, postID string, profileSettings models.ProfileSettings) (models.Detection, error)
+	DeleteProfile(ctx context.Context, profileID int64) error
 	GetSourcePosts(ctx context.Context, ids []string) ([]models.SourcePost, error)
 	// GetSourceIDsForAnalysis returns a list of source IDs for analysis.
 	//
@@ -97,8 +98,18 @@ func (s *Scout) ScheduleAnalysis(ctx context.Context, tasks []models.AnalysisTas
 	return s.taskAdder.Add(ctx, tasks)
 }
 
-func (s *Scout) DeleteProfileByID(ctx context.Context, id int64) error {
-	return s.storage.DeleteProfileByID(ctx, id)
+func (s *Scout) DeleteProfile(ctx context.Context, id int64) error {
+	if err := s.storage.DeleteProfileByID(ctx, id); err != nil {
+		return fmt.Errorf("delete profile from storage: %w", err)
+	}
+
+	for source, toolkit := range s.toolkits {
+		if err := toolkit.DeleteProfile(ctx, id); err != nil {
+			return fmt.Errorf("delete profile from source toolkit (source=%s): %w", source, err)
+		}
+	}
+
+	return nil
 }
 
 func (s *Scout) GetAllProfiles(ctx context.Context) ([]models.Profile, error) {

@@ -17,7 +17,7 @@ import (
 
 type scout interface {
 	Analyze(ctx context.Context, source string, sourceID string, profileSettings models.ProfileSettings, shouldSave bool) (models.Detection, error)
-	DeleteProfileByID(ctx context.Context, id int64) error
+	DeleteProfile(ctx context.Context, id int64) error
 	GetAllProfiles(ctx context.Context) ([]models.Profile, error)
 	GetProfile(ctx context.Context, id int64) (profile models.Profile, found bool, err error)
 	CreateProfile(ctx context.Context, profile models.Profile) (id int64, err error)
@@ -67,7 +67,7 @@ func NewGinEngine(server *Server, middlewares ...gin.HandlerFunc) *gin.Engine {
 
 // DeleteApiProfilesId implements oapi.StrictServerInterface.
 func (s *Server) DeleteApiProfilesId(ctx context.Context, request oapi.DeleteApiProfilesIdRequestObject) (oapi.DeleteApiProfilesIdResponseObject, error) {
-	if err := s.scout.DeleteProfileByID(ctx, int64(request.Id)); err != nil {
+	if err := s.scout.DeleteProfile(ctx, int64(request.Id)); err != nil {
 		return oapi.DeleteApiProfilesId500JSONResponse{Error: err.Error()}, nil
 	}
 
