@@ -39,6 +39,10 @@ export const columns = (
       <div className="flex items-center h-full">
         <Checkbox
           checked={row.getIsSelected()}
+          onClick={(e) => {
+            e.stopPropagation()
+            row.toggleSelected()
+          }}
           onCheckedChange={(value) => row.toggleSelected(!!value)}
           aria-label="Select row"
           className="align-middle"
@@ -101,7 +105,10 @@ export const columns = (
         <Button 
           variant="ghost" 
           size="sm"
-          onClick={() => onAnalyzePost(postId)}
+          onClick={(e) => {
+            e.stopPropagation()
+            onAnalyzePost(postId)
+          }}
           disabled={isAnalyzingPost(postId)}
         >
           <RefreshCw className="h-4 w-4" />

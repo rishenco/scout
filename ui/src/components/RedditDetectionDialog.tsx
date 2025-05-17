@@ -16,7 +16,7 @@ export function RedditDetectionDialog({ listedDetection, open, onOpenChange }: R
   return (
     <Dialog open={open} onOpenChange={onOpenChange} >
       <DialogTitle>
-        <span>ignore</span>
+        <span></span>
       </DialogTitle>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-0">
         <RedditDetectionCard

@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PlaygroundStats } from "@/components/playground/PlaygroundStats";
-import type { AnalyzeRequest, ProfileSettingsUpdate } from "@/api/models";
+import type { AnalyzeRequest, ProfileSettingsUpdate, ListedDetection } from "@/api/models";
 import { useAnalyzePost, useInfiniteDetections } from "@/api/hooks";
 import { Loader2 } from "lucide-react";
 import {type BenchmarkStats, isPostCorrect, type PlaygroundPost} from "@/components/playground/models";
@@ -12,6 +12,7 @@ import { columns as createColumns } from "./columns";
 import type { RowSelectionState } from "@tanstack/react-table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { RedditDetectionDialog } from "@/components/RedditDetectionDialog";
 
 interface PlaygroundPostListProps {
   profileId: string;
@@ -30,6 +31,8 @@ export function PlaygroundPostList({
   const [postsBeingAnalyzed, setPostsBeingAnalyzed] = useState<string[]>([]);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [postsToShowCount, setPostsToShowCount] = useState<string>("10");
+  const [selectedDetection, setSelectedDetection] = useState<ListedDetection | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const profileIdNumber = parseInt(profileId, 10);
 
@@ -87,6 +90,22 @@ export function PlaygroundPostList({
       setPostsBeingAnalyzed(prev => prev.filter(id => id !== postId));
     }
   };
+
+  const handleRowClick = (post: PlaygroundPost) => {
+    setSelectedDetection(post.originalPost);
+    setIsDialogOpen(true);
+  };
+
+  // update selected detection when data changes (because of like updates)
+  useEffect(() => {
+    if (!selectedDetection || !feed) {
+      return
+    }
+    const detection = feed.pages.flatMap(page => page).find(d => d.detection?.id === selectedDetection.detection.id)
+    if (detection) {
+      setSelectedDetection(detection)
+    }
+  }, [feed, selectedDetection])
 
   useEffect(() => {
     if (feed) {
@@ -330,6 +349,7 @@ export function PlaygroundPostList({
           data={filteredAndSlicedPosts}
           rowSelection={rowSelection}
           onRowSelectionChange={setRowSelection}
+          onRowClick={handleRowClick}
         />
       )}
 
@@ -347,6 +367,14 @@ export function PlaygroundPostList({
               : 'Nothing more to load'}
           </button>
         </div>
+      )}
+
+      {selectedDetection && (
+        <RedditDetectionDialog
+          listedDetection={selectedDetection}
+          open={isDialogOpen}
+          onOpenChange={setIsDialogOpen}
+        />
       )}
     </div>
   );

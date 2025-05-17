@@ -29,6 +29,7 @@ interface DataTableProps<TData, TValue> {
   data: TData[]
   rowSelection: RowSelectionState
   onRowSelectionChange: (updater: React.SetStateAction<RowSelectionState>) => void
+  onRowClick?: (row: TData) => void
 }
 
 export function DataTable<TData, TValue>({
@@ -36,6 +37,7 @@ export function DataTable<TData, TValue>({
   data,
   rowSelection,
   onRowSelectionChange,
+  onRowClick,
 }: DataTableProps<TData, TValue>) {
   const [columnVisibility, setColumnVisibility] =useState<VisibilityState>({})
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
@@ -102,6 +104,7 @@ export function DataTable<TData, TValue>({
                 key={row.id}
                 data-state={row.getIsSelected() && "selected"}
                 className={rowHighlightClass(row.original as PlaygroundPost)}
+                onClick={() => onRowClick && onRowClick(row.original as TData)}
               >
                 {row.getVisibleCells().map((cell) => (
                   <TableCell key={cell.id}>
