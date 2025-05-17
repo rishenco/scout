@@ -33,10 +33,10 @@ type SourceToolkit interface {
 	//
 	// profileIDs - profiles for which to get source IDs
 	//
-	// days - how many days to go back in time to analyze
+	// days - how many days to go back in time to analyze. If nil, analyze all posts.
 	//
-	// limit - how many posts to analyze. If -1, analyze all posts.
-	GetScheduledSourceIDs(ctx context.Context, profileIDs []int64, days int, limit int) ([]string, error)
+	// limit - how many posts to analyze. If nil, analyze all posts.
+	GetScheduledSourceIDs(ctx context.Context, profileIDs []int64, days *int, limit *int) ([]string, error)
 }
 
 type Scout struct {
@@ -154,7 +154,7 @@ func (s *Scout) ListDetections(ctx context.Context, query models.DetectionQuery)
 	return s.storage.ListDetections(ctx, query)
 }
 
-func (s *Scout) JumpstartProfile(ctx context.Context, profileID int64, jumpstartPeriod int, limit int) error {
+func (s *Scout) JumpstartProfile(ctx context.Context, profileID int64, jumpstartPeriod *int, limit *int) error {
 	var analysisTasks []models.AnalysisTask
 
 	for source, toolkit := range s.toolkits {

@@ -414,12 +414,12 @@ components:
           type: integer
         jumpstart_period:
           type: integer
-          description: How many days to go back in time to analyze. If -1, analyze all posts.
+          description: How many days to go back in time to analyze. If null, analyze all posts.
           default: 30
         limit:
           type: integer
-          description: How many posts to analyze. If -1, analyze all posts.
-          default: -1
+          description: How many posts to analyze. If null, analyze all posts.
+          default: null
       required:
         - profile_id
 

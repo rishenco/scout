@@ -27,11 +27,11 @@ export type ProfileSettings = {
 export type ProfileJumpstartRequest = {
     profile_id: number;
     /**
-     * How many days to go back in time to analyze. If -1, analyze all posts.
+     * How many days to go back in time to analyze. If null, analyze all posts.
      */
     jumpstart_period?: number;
     /**
-     * How many posts to analyze. If -1, analyze all posts.
+     * How many posts to analyze. If null, analyze all posts.
      */
     limit?: number;
 };

@@ -26,7 +26,7 @@ type scout interface {
 	GetDetectionTags(ctx context.Context, detectionIDs []int64) ([]models.DetectionTags, error)
 	GetSourcePosts(ctx context.Context, source string, sourceIDs []string) ([]models.SourcePost, error)
 	ListDetections(ctx context.Context, query models.DetectionQuery) ([]models.DetectionRecord, error)
-	JumpstartProfile(ctx context.Context, profileID int64, jumpstartPeriod int, limit int) error
+	JumpstartProfile(ctx context.Context, profileID int64, jumpstartPeriod *int, limit *int) error
 }
 
 type redditToolkit interface {
@@ -303,18 +303,18 @@ func (s *Server) PostApiSourcesRedditSubredditsSubredditRemoveProfiles(ctx conte
 
 // PostApiProfilesIdJumpstart implements oapi.StrictServerInterface.
 func (s *Server) PostApiProfilesIdJumpstart(ctx context.Context, request oapi.PostApiProfilesIdJumpstartRequestObject) (oapi.PostApiProfilesIdJumpstartResponseObject, error) {
-	jumpstartPeriod := 30
-	jumpstartLimit := -1
+	var jumpstartDays *int
+	var jumpstartLimit *int
 
 	if request.Body.JumpstartPeriod != nil {
-		jumpstartPeriod = int(*request.Body.JumpstartPeriod)
+		jumpstartDays = lo.ToPtr(int(*request.Body.JumpstartPeriod))
 	}
 
 	if request.Body.Limit != nil {
-		jumpstartLimit = int(*request.Body.Limit)
+		jumpstartLimit = lo.ToPtr(int(*request.Body.Limit))
 	}
 
-	if err := s.scout.JumpstartProfile(ctx, int64(request.Id), jumpstartPeriod, jumpstartLimit); err != nil {
+	if err := s.scout.JumpstartProfile(ctx, int64(request.Id), jumpstartDays, jumpstartLimit); err != nil {
 		return oapi.PostApiProfilesIdJumpstart500JSONResponse{Error: err.Error()}, nil
 	}
 
