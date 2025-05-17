@@ -3,6 +3,7 @@ import type { Profile } from '@/api/models'
 import { Button } from '@/components/ui/button'
 import { Link, useNavigate } from 'react-router-dom'
 import { useSubredditsForProfile } from '@/api/hooks'
+
 interface ProfileCardProps {
   profile: Profile
 }

@@ -6,10 +6,12 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import type { PlaygroundPost } from "@/components/playground/models"
 import { RelevancyBadge } from "@/components/RelevancyBadge"
+
 const getRelevancyBadge = (isRelevant?: boolean) => {
   if (isRelevant === undefined) {
     return <Badge variant="outline">N/A</Badge>;
   }
+  
   return <RelevancyBadge isRelevant={isRelevant} compact={true} />;
 };
 

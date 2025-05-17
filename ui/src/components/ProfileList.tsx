@@ -15,6 +15,8 @@ export function ProfileList({ profiles, isLoading, error }: ProfileListProps) {
     return <div className="text-center py-8">Loading profiles...</div>
   }
 
+  profiles.sort((a, b) => a.name.localeCompare(b.name))
+
   if (error) {
     return <div className="text-center py-8 text-destructive">Error: {error.message}</div>
   }

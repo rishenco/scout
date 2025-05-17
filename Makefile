@@ -39,3 +39,11 @@ generate:
 		--output ./src/api/generated \
 		--client @hey-api/client-axios && \
 	cd ..
+
+.PHONY: up-db
+up-db:
+	docker compose up -d postgres
+
+.PHONY: down-db
+down-db:
+	docker compose down postgres

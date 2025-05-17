@@ -1,6 +1,6 @@
 import { createBrowserRouter, Outlet } from 'react-router-dom'
 import Home from '@/pages/Home'
-import ProfileFeed from '@/pages/ProfileFeed'
+import ProfileDetectionList from '@/pages/ProfileDetectionList'
 import NewProfile from '@/pages/NewProfile'
 import EditProfile from '@/pages/EditProfile'
 
@@ -22,7 +22,7 @@ export const router = createBrowserRouter([
       },
       {
         path: '/profiles/:profileId',
-        element: <ProfileFeed />,
+        element: <ProfileDetectionList />,
       },
       {
         path: '/profiles/new',
