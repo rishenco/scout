@@ -2,17 +2,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label'
 import type { DetectionFilter } from '@/api/models'
 
-interface FeedFiltersProps {
-  filters: DetectionFilter
-  onFiltersChange: (filters: DetectionFilter) => void
+interface DetectionFilterProps {
+  filter: DetectionFilter
+  onFilterChange: (filter: DetectionFilter) => void
 }
 
-export function FeedFilters({ filters, onFiltersChange }: FeedFiltersProps) {
-  const isRelevantKey = filters.is_relevant === undefined ? 'all' : filters.is_relevant ? 'relevant' : 'irrelevant'
+export function DetectionFilter({ filter, onFilterChange }: DetectionFilterProps) {
+  const isRelevantKey = filter.is_relevant === undefined ? 'all' : filter.is_relevant ? 'relevant' : 'irrelevant'
 
   const handleRelevancyChange = (value: string) => {
-    onFiltersChange({
-      ...filters,
+    onFilterChange({
+      ...filter,
       is_relevant: value === 'all' ? undefined : value === 'relevant'
     })
   }

@@ -70,7 +70,7 @@ func (t *Toolkit) GetSourcePosts(ctx context.Context, ids []string) ([]models.So
 			continue
 		}
 
-		if err := json.Unmarshal(rawPost.Data, &sourcePost); err != nil {
+		if err := json.Unmarshal(rawPost.Data, &sourcePost.Post); err != nil {
 			return nil, fmt.Errorf("unmarshal post: %w", err)
 		}
 

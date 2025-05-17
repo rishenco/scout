@@ -36,23 +36,13 @@ export function ProfileEditor({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    const profileUpdate: ProfileUpdate = {};
-
-    if (name) {
-      profileUpdate.name = name;
-    }
-
-    if (relevancyFilterPrompt || propertiesPrompts) {
-      profileUpdate.default_settings = {};
-
-      if (relevancyFilterPrompt) {
-        profileUpdate.default_settings.relevancy_filter = relevancyFilterPrompt;
-      }
-
-      if (propertiesPrompts) {
-        profileUpdate.default_settings.extracted_properties = propertiesPrompts;
-      }
-    }
+    const profileUpdate: ProfileUpdate = {
+      name: name,
+      default_settings: {
+        relevancy_filter: relevancyFilterPrompt,
+        extracted_properties: propertiesPrompts,
+      },
+    };
 
     onSubmit(profileUpdate, subreddits);
   };

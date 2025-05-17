@@ -1,19 +1,18 @@
 import { useEffect, useState } from 'react'
 import { useInView } from 'react-intersection-observer'
-import { FeedFilters as FeedFiltersComponent} from '@/components/FeedFilters'
-import { PostCard } from '@/components/PostCard'
+import { DetectionFilter as DetectionFilterComponent} from '@/components/DetectionFilter'
+import { DetectionCard } from '@/components/DetectionCard'
 import { useInfiniteDetections } from '@/api/hooks'
 import type { DetectionFilter } from '@/api/models'
 
-interface PostFeedProps {
-  profileId: string
+interface DetectionListProps {
+  profileId: number
 }
 
-
-export function PostFeed({ profileId }: PostFeedProps) {
-  const [filters, setFilters] = useState<DetectionFilter>({
+export function DetectionList({ profileId }: DetectionListProps) {
+  const [filter, setFilter] = useState<DetectionFilter>({
     is_relevant: true,
-    profiles: [parseInt(profileId)],
+    profiles: [profileId],
   })
   
   // Setup infinite scroll with intersection observer
@@ -28,10 +27,10 @@ export function PostFeed({ profileId }: PostFeedProps) {
     isFetchingNextPage, 
     fetchNextPage, 
     hasNextPage 
-  } = useInfiniteDetections(filters);
+  } = useInfiniteDetections(filter);
 
   // Flatten the pages data from the hook into a single array
-  const allPosts = data?.pages.flatMap(page => page) ?? []
+  const allDetections = data?.pages.flatMap(page => page) ?? []
   // Load more when scroll reaches the end and there are more pages
   useEffect(() => {
     if (inView && hasNextPage && !isFetchingNextPage) {
@@ -40,36 +39,36 @@ export function PostFeed({ profileId }: PostFeedProps) {
   }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage])
   
   // Handle filter changes - changing filters automatically triggers refetch via queryKey
-  const handleFiltersChange = (newFilters: DetectionFilter) => {
-    setFilters(newFilters)
+  const handleFilterChange = (newFilter: DetectionFilter) => {
+    setFilter(newFilter)
   }
   
   return (
     <div className="space-y-4">
-      <FeedFiltersComponent 
-        filters={filters}
-        onFiltersChange={handleFiltersChange} 
+      <DetectionFilterComponent 
+        filter={filter}
+        onFilterChange={handleFilterChange} 
       />
       
       <div className="space-y-4">
         {/* Map through flattened posts */}
-        {allPosts.map(feedPost => (
-          <PostCard 
-            key={feedPost.detection.id} // Use detection ID as key
-            detection={feedPost}
+        {allDetections.map(detection => (
+          <DetectionCard 
+            key={detection.detection.id} // Use detection ID as key
+            listedDetection={detection}
           />
         ))}
         
         {/* Show loading skeletons for initial load */}
         {isLoading && (
           Array.from({ length: 3 }, (_, i) => (
-            <PostCard key={`loading-${i}`} isLoading />
+            <DetectionCard key={`loading-${i}`} isLoading />
           ))
         )}
         
         {/* Show a loading indicator for infinite scroll */}
         {isFetchingNextPage && (
-          <PostCard isLoading />
+          <DetectionCard key={`loading`} isLoading />
         )}
         
         {/* Intersection target for infinite scrolling - load more when this becomes visible */}
@@ -77,9 +76,9 @@ export function PostFeed({ profileId }: PostFeedProps) {
         {hasNextPage && <div ref={ref} className="h-10" />} 
         
         {/* Show message when no posts match filters after initial load */}
-        {!isLoading && !isFetchingNextPage && allPosts.length === 0 && (
+        {!isLoading && !isFetchingNextPage && allDetections.length === 0 && (
           <div className="p-8 text-center">
-            <p className="text-muted-foreground">No posts found with the current filters.</p>
+            <p className="text-muted-foreground">No detections found with the current filters.</p>
           </div>
         )}
       </div>
