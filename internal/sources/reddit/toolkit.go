@@ -22,10 +22,10 @@ type toolkitStorage interface {
 	//
 	// subreddits - subreddits to get post IDs for
 	//
-	// days - how many days to go back in time to analyze
+	// days - how many days to go back in time to analyze. If nil, analyze all posts.
 	//
-	// limit - how many posts to analyze. If -1, analyze all posts.
-	GetScheduledPostIDsFromSubreddits(ctx context.Context, subreddits []string, days int, limit int) ([]string, error)
+	// limit - how many posts to analyze. If nil, analyze all posts.
+	GetScheduledPostIDsFromSubreddits(ctx context.Context, subreddits []string, days *int, limit *int) ([]string, error)
 }
 
 type analyzer interface {
@@ -106,7 +106,7 @@ func (t *Toolkit) RemoveProfilesFromSubreddit(ctx context.Context, subreddit str
 	return t.storage.RemoveProfilesFromSubreddit(ctx, subreddit, profileIDs)
 }
 
-func (t *Toolkit) GetScheduledSourceIDs(ctx context.Context, profileIDs []int64, days int, limit int) ([]string, error) {
+func (t *Toolkit) GetScheduledSourceIDs(ctx context.Context, profileIDs []int64, days *int, limit *int) ([]string, error) {
 	allSubredditSettings, err := t.storage.GetAllSubredditSettingsWithProfileID(ctx, profileIDs[0])
 	if err != nil {
 		return nil, fmt.Errorf("get subreddit settings: %w", err)
