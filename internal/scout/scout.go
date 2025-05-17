@@ -27,7 +27,16 @@ type taskAdder interface {
 
 type SourceToolkit interface {
 	Analyze(ctx context.Context, postID string, profileSettings models.ProfileSettings) (models.Detection, error)
+	DeleteProfile(ctx context.Context, profileID int64) error
 	GetSourcePosts(ctx context.Context, ids []string) ([]models.SourcePost, error)
+	// GetSourceIDsForAnalysis returns a list of source IDs for analysis.
+	//
+	// profileIDs - profiles for which to get source IDs
+	//
+	// days - how many days to go back in time to analyze. If nil, analyze all posts.
+	//
+	// limit - how many posts to analyze. If nil, analyze all posts.
+	GetScheduledSourceIDs(ctx context.Context, profileIDs []int64, days *int, limit *int) ([]string, error)
 }
 
 type Scout struct {
@@ -89,8 +98,18 @@ func (s *Scout) ScheduleAnalysis(ctx context.Context, tasks []models.AnalysisTas
 	return s.taskAdder.Add(ctx, tasks)
 }
 
-func (s *Scout) DeleteProfileByID(ctx context.Context, id int64) error {
-	return s.storage.DeleteProfileByID(ctx, id)
+func (s *Scout) DeleteProfile(ctx context.Context, id int64) error {
+	if err := s.storage.DeleteProfileByID(ctx, id); err != nil {
+		return fmt.Errorf("delete profile from storage: %w", err)
+	}
+
+	for source, toolkit := range s.toolkits {
+		if err := toolkit.DeleteProfile(ctx, id); err != nil {
+			return fmt.Errorf("delete profile from source toolkit (source=%s): %w", source, err)
+		}
+	}
+
+	return nil
 }
 
 func (s *Scout) GetAllProfiles(ctx context.Context) ([]models.Profile, error) {
@@ -133,4 +152,30 @@ func (s *Scout) GetSourcePosts(ctx context.Context, source string, sourceIDs []s
 
 func (s *Scout) ListDetections(ctx context.Context, query models.DetectionQuery) ([]models.DetectionRecord, error) {
 	return s.storage.ListDetections(ctx, query)
+}
+
+func (s *Scout) JumpstartProfile(ctx context.Context, profileID int64, jumpstartPeriod *int, limit *int) error {
+	var analysisTasks []models.AnalysisTask
+
+	for source, toolkit := range s.toolkits {
+		sourceIDs, err := toolkit.GetScheduledSourceIDs(ctx, []int64{profileID}, jumpstartPeriod, limit)
+		if err != nil {
+			return fmt.Errorf("get source IDs for analysis (source=%s): %w", source, err)
+		}
+
+		for _, sourceID := range sourceIDs {
+			analysisTasks = append(analysisTasks, models.AnalysisTask{
+				Source:     source,
+				SourceID:   sourceID,
+				ProfileID:  profileID,
+				ShouldSave: true,
+			})
+		}
+	}
+
+	if err := s.taskAdder.Add(ctx, analysisTasks); err != nil {
+		return fmt.Errorf("add analysis tasks: %w", err)
+	}
+
+	return nil
 }

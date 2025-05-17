@@ -129,6 +129,33 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /api/profiles/{id}/jumpstart:
+    post:
+      summary: Jumpstart a profile - run analysis on old posts
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfileJumpstartRequest'
+      responses:
+        "204":
+          description: Profile jumpstarted successfully
+        "404":
+          description: Profile not found
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /api/detections/list:
     post:
       summary: List detections
@@ -380,6 +407,22 @@ components:
         - relevancy_filter
         - extracted_properties
     
+    ProfileJumpstartRequest:
+      type: object
+      properties:
+        profile_id:
+          type: integer
+        jumpstart_period:
+          type: integer
+          description: How many days to go back in time to analyze. If null, analyze all posts.
+          default: 30
+        limit:
+          type: integer
+          description: How many posts to analyze. If null, analyze all posts.
+          default: null
+      required:
+        - profile_id
+
     ProfileUpdate:
       type: object
       properties:

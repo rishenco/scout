@@ -12,6 +12,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/samber/lo"
 
+	"github.com/rishenco/scout/internal/tools"
 	"github.com/rishenco/scout/pkg/models"
 )
 
@@ -267,7 +268,7 @@ func (s *ScoutStorage) UpdateProfile(ctx context.Context, update models.ProfileU
 
 	// Updating profile
 
-	updateProfileSb := psq().
+	updateProfileSb := tools.Psq().
 		Update("scout.profiles").
 		Where(sq.Eq{"id": update.ProfileID}).
 		Set("updated_at", sq.Expr("NOW()"))
@@ -300,7 +301,7 @@ func (s *ScoutStorage) UpdateProfile(ctx context.Context, update models.ProfileU
 	for source, settingsUpdate := range sourceSettingsUpdates {
 		if settingsUpdate == nil {
 			// Delete settings
-			sb := psq().
+			sb := tools.Psq().
 				Delete("scout.profile_settings").
 				Where(sq.Eq{"profile_id": update.ProfileID}).
 				Where(sq.Eq{"source": source})
@@ -327,7 +328,7 @@ func (s *ScoutStorage) UpdateProfile(ctx context.Context, update models.ProfileU
 
 		// Inserting if not exists
 
-		insertSettingsSb := psq().
+		insertSettingsSb := tools.Psq().
 			Insert("scout.profile_settings").
 			Columns("profile_id", "source", "relevancy_filter", "extracted_properties").
 			Values(update.ProfileID, source, "", "{}").
@@ -343,7 +344,7 @@ func (s *ScoutStorage) UpdateProfile(ctx context.Context, update models.ProfileU
 			return fmt.Errorf("insert scout.profile_settings: %w", err)
 		}
 
-		sb := psq().
+		sb := tools.Psq().
 			Update("scout.profile_settings").
 			Where(sq.Eq{"profile_id": update.ProfileID}).
 			Where(sq.Eq{"source": source}).
@@ -440,7 +441,7 @@ func (s *ScoutStorage) GetDetectionTags(ctx context.Context, detectionIDs []int6
 }
 
 func (s *ScoutStorage) ListDetections(ctx context.Context, query models.DetectionQuery) ([]models.DetectionRecord, error) {
-	sb := psq().
+	sb := tools.Psq().
 		Select(
 			"d.id",
 			"d.source",
@@ -529,8 +530,4 @@ func (s *ScoutStorage) ListDetections(ctx context.Context, query models.Detectio
 	}
 
 	return result, nil
-}
-
-func psq() sq.StatementBuilderType {
-	return sq.StatementBuilder.PlaceholderFormat(sq.Dollar)
 }
