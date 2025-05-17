@@ -26,6 +26,7 @@ type scout interface {
 	GetDetectionTags(ctx context.Context, detectionIDs []int64) ([]models.DetectionTags, error)
 	GetSourcePosts(ctx context.Context, source string, sourceIDs []string) ([]models.SourcePost, error)
 	ListDetections(ctx context.Context, query models.DetectionQuery) ([]models.DetectionRecord, error)
+	JumpstartProfile(ctx context.Context, profileID int64, jumpstartPeriod int, limit int) error
 }
 
 type redditToolkit interface {
@@ -298,6 +299,26 @@ func (s *Server) PostApiSourcesRedditSubredditsSubredditRemoveProfiles(ctx conte
 	}
 
 	return oapi.PostApiSourcesRedditSubredditsSubredditRemoveProfiles204Response{}, nil
+}
+
+// PostApiProfilesIdJumpstart implements oapi.StrictServerInterface.
+func (s *Server) PostApiProfilesIdJumpstart(ctx context.Context, request oapi.PostApiProfilesIdJumpstartRequestObject) (oapi.PostApiProfilesIdJumpstartResponseObject, error) {
+	jumpstartPeriod := 30
+	jumpstartLimit := -1
+
+	if request.Body.JumpstartPeriod != nil {
+		jumpstartPeriod = int(*request.Body.JumpstartPeriod)
+	}
+
+	if request.Body.Limit != nil {
+		jumpstartLimit = int(*request.Body.Limit)
+	}
+
+	if err := s.scout.JumpstartProfile(ctx, int64(request.Id), jumpstartPeriod, jumpstartLimit); err != nil {
+		return oapi.PostApiProfilesIdJumpstart500JSONResponse{Error: err.Error()}, nil
+	}
+
+	return oapi.PostApiProfilesIdJumpstart204Response{}, nil
 }
 
 func profileFromModel(profile models.Profile) oapi.Profile {
