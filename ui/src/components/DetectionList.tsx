@@ -41,6 +41,17 @@ export function DetectionList({ profileId }: DetectionListProps) {
       fetchNextPage()
     }
   }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage])
+
+  // update selected detection when data changes (because of like updates)
+  useEffect(() => {
+    if (!selectedDetection || !allDetections) {
+      return
+    }
+    const detection = allDetections.find(d => d.detection.id === selectedDetection.detection.id)
+    if (detection) {
+      setSelectedDetection(detection)
+    }
+  }, [allDetections, selectedDetection])
   
   // Handle filter changes - changing filters automatically triggers refetch via queryKey
   const handleFilterChange = (newFilter: DetectionFilter) => {
@@ -51,6 +62,7 @@ export function DetectionList({ profileId }: DetectionListProps) {
     setSelectedDetection(detection)
     setIsDialogOpen(true)
   }
+
   
   return (
     <div className="space-y-4">
