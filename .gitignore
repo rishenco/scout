@@ -30,3 +30,6 @@ __debug_bin*
 .vscode
 
 .local
+
+.vite
+node_modules
