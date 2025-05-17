@@ -24,6 +24,18 @@ export type ProfileSettings = {
     created_at?: string;
 };
 
+export type ProfileJumpstartRequest = {
+    profile_id: number;
+    /**
+     * How many days to go back in time to analyze. If -1, analyze all posts.
+     */
+    jumpstart_period?: number;
+    /**
+     * How many posts to analyze. If -1, analyze all posts.
+     */
+    limit?: number;
+};
+
 export type ProfileUpdate = {
     name?: string;
     default_settings?: ProfileSettingsUpdate;
@@ -247,6 +259,37 @@ export type PutApiProfilesByIdResponses = {
      */
     200: unknown;
 };
+
+export type PostApiProfilesByIdJumpstartData = {
+    body: ProfileJumpstartRequest;
+    path: {
+        id: number;
+    };
+    query?: never;
+    url: '/api/profiles/{id}/jumpstart';
+};
+
+export type PostApiProfilesByIdJumpstartErrors = {
+    /**
+     * Profile not found
+     */
+    404: unknown;
+    /**
+     * Internal server error
+     */
+    500: _Error;
+};
+
+export type PostApiProfilesByIdJumpstartError = PostApiProfilesByIdJumpstartErrors[keyof PostApiProfilesByIdJumpstartErrors];
+
+export type PostApiProfilesByIdJumpstartResponses = {
+    /**
+     * Profile jumpstarted successfully
+     */
+    204: void;
+};
+
+export type PostApiProfilesByIdJumpstartResponse = PostApiProfilesByIdJumpstartResponses[keyof PostApiProfilesByIdJumpstartResponses];
 
 export type PostApiDetectionsListData = {
     body: DetectionListRequest;
