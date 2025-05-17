@@ -18,6 +18,7 @@ type storage interface {
 	SaveDetection(ctx context.Context, record models.DetectionRecord) error
 	ListDetections(ctx context.Context, query models.DetectionQuery) ([]models.DetectionRecord, error)
 	GetDetectionTags(ctx context.Context, detectionIDs []int64) ([]models.DetectionTags, error)
+	GetPresentDetections(ctx context.Context, source string, sourceIDs []string) ([]string, error)
 	UpdateTags(ctx context.Context, detectionID int64, update models.DetectionTagsUpdate) (models.DetectionTags, error)
 }
 
@@ -155,7 +156,7 @@ func (s *Scout) ListDetections(ctx context.Context, query models.DetectionQuery)
 }
 
 func (s *Scout) JumpstartProfile(ctx context.Context, profileID int64, jumpstartPeriod *int, limit *int) error {
-	var analysisTasks []models.AnalysisTask
+	sourceToIDs := make(map[string][]string)
 
 	for source, toolkit := range s.toolkits {
 		sourceIDs, err := toolkit.GetScheduledSourceIDs(ctx, []int64{profileID}, jumpstartPeriod, limit)
@@ -163,7 +164,28 @@ func (s *Scout) JumpstartProfile(ctx context.Context, profileID int64, jumpstart
 			return fmt.Errorf("get source IDs for analysis (source=%s): %w", source, err)
 		}
 
+		sourceToIDs[source] = sourceIDs
+	}
+
+	var analysisTasks []models.AnalysisTask
+
+	for source, sourceIDs := range sourceToIDs {
+		presentSourceIDs, err := s.storage.GetPresentDetections(ctx, source, sourceIDs)
+		if err != nil {
+			return fmt.Errorf("get present detections (source=%s): %w", source, err)
+		}
+
+		presentSourceIDsSet := make(map[string]struct{})
+		for _, id := range presentSourceIDs {
+			presentSourceIDsSet[id] = struct{}{}
+		}
+
 		for _, sourceID := range sourceIDs {
+			if _, ok := presentSourceIDsSet[sourceID]; ok {
+				// skipping already present detections
+				continue
+			}
+
 			analysisTasks = append(analysisTasks, models.AnalysisTask{
 				Source:     source,
 				SourceID:   sourceID,
