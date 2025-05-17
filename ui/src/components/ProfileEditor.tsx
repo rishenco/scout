@@ -1,22 +1,24 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PromptInput } from "@/components/PromptInput";
 import { PropertiesEditor } from "@/components/PropertiesEditor";
 import { SubredditSelector } from "@/components/SubredditSelector";
-import type { ProfileSettings, Profile, ProfileUpdate } from "@/api/models";
+import type { Profile, ProfileUpdate } from "@/api/models";
 import { useSubredditsForProfile } from "@/api/hooks";
 
 type ProfileEditorProps = {
   initialProfile?: Partial<Profile>;
-  onSubmit: (profile: ProfileUpdate, subreddits: string[]) => void;
+  onEdit?: (profile: ProfileUpdate, subreddits: string[]) => void;
+  onSubmit?: (profile: ProfileUpdate, subreddits: string[]) => void;
   isSubmitting?: boolean;
   className?: string;
 };
 
 export function ProfileEditor({
   initialProfile = {},
+  onEdit,
   onSubmit,
   isSubmitting = false,
   className = "",
@@ -36,16 +38,25 @@ export function ProfileEditor({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    onSubmit && onSubmit({
+      name: name,
+      default_settings: {
+        relevancy_filter: relevancyFilterPrompt || '',
+        extracted_properties: propertiesPrompts || {},
+      },
+    }, subreddits);
+  };
+
+  useEffect(() => {
     const profileUpdate: ProfileUpdate = {
       name: name,
       default_settings: {
-        relevancy_filter: relevancyFilterPrompt,
-        extracted_properties: propertiesPrompts,
+        relevancy_filter: relevancyFilterPrompt || '',
+        extracted_properties: propertiesPrompts || {},
       },
     };
-
-    onSubmit(profileUpdate, subreddits);
-  };
+    onEdit && onEdit(profileUpdate, subreddits);
+  }, [name, relevancyFilterPrompt, propertiesPrompts, subreddits, onEdit]);
 
   return (
     <form onSubmit={handleSubmit} className={`space-y-8 ${className}`}>

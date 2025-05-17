@@ -49,7 +49,8 @@ export const columns = (
     enableHiding: false,
   },
   {
-    accessorKey: "originalPost.source_post.post.title",
+    id: "title",
+    accessorFn: (row) => row.originalPost?.source_post?.post?.title,
     header: ({ column }) => {
       return (
         <Button
@@ -61,27 +62,33 @@ export const columns = (
         </Button>
       )
     },
-    cell: ({ row }) => <div className="truncate max-w-xs">{row.getValue("originalPost_source_post_post_title")}</div>,
+    cell: ({ getValue }) => <div className="truncate max-w-xs">{getValue<string>()}</div>,
   },
   {
-    accessorKey: "originalPost.detection.is_relevant",
+    id: "originalRelevancy",
+    accessorFn: (row) => row.originalPost.detection.is_relevant,
     header: "Original",
-    cell: ({ row }) => getRelevancyBadge(row.getValue("originalPost_detection_is_relevant")),
+    cell: ({ getValue }) => getRelevancyBadge(getValue<boolean | undefined>()),
   },
   {
-    accessorKey: "originalPost.tags.relevancy_detected_correctly",
+    id: "expectedRelevancy",
+    accessorFn: (row) => {
+      const wasCorrect = row.originalPost?.tags?.relevancy_detected_correctly;
+      const originalRelevancy = row.originalPost?.detection?.is_relevant;
+      return wasCorrect ? originalRelevancy : !originalRelevancy;
+    },
     header: "Expected",
-    cell: ({ row }) => getRelevancyBadge(row.getValue("originalPost_tags_relevancy_detected_correctly")),
+    cell: ({ getValue }) => getRelevancyBadge(getValue<boolean | undefined>()),
   },
   {
-    accessorKey: "newDetection.is_relevant",
+    id: "newRelevancy",
+    accessorFn: (row) => row.newDetection?.is_relevant,
     header: "New",
-    cell: ({ row }) => {
-      const newDetection = row.original.newDetection;
+    cell: ({ row, getValue }) => {
       if (isAnalyzingPost(row.original.originalPost.detection.source_id)) {
         return <span className="inline-block animate-hourglass-turn">⌛</span>;
       }
-      return getRelevancyBadge(newDetection?.is_relevant);
+      return getRelevancyBadge(getValue<boolean | undefined>());
     }
   },
   {

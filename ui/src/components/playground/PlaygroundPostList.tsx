@@ -3,10 +3,10 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PlaygroundStats } from "@/components/playground/PlaygroundStats";
-import type { AnalyzeRequest, ProfileSettings } from "@/api/models";
+import type { AnalyzeRequest, ProfileSettingsUpdate } from "@/api/models";
 import { useAnalyzePost, useInfiniteDetections } from "@/api/hooks";
 import { Loader2 } from "lucide-react";
-import type { BenchmarkStats, PlaygroundPost } from "@/components/playground/models";
+import {type BenchmarkStats, isPostCorrect, type PlaygroundPost} from "@/components/playground/models";
 import { DataTable } from "./data-table";
 import { columns as createColumns } from "./columns";
 import type { RowSelectionState } from "@tanstack/react-table";
@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 
 interface PlaygroundPostListProps {
   profileId: string;
-  profileSettings: ProfileSettings;
+  profileSettings: ProfileSettingsUpdate;
 }
 
 type CorrectnessFilter = 'all' | 'correct' | 'incorrect';
@@ -32,31 +32,31 @@ export function PlaygroundPostList({
   const [postsToShowCount, setPostsToShowCount] = useState<string>("10");
 
   const profileIdNumber = parseInt(profileId, 10);
-  
-  const { 
-    data: feed, 
-    isLoading: isLoadingFeed, 
-    fetchNextPage, 
-    hasNextPage, 
-    isFetchingNextPage 
+
+  const {
+    data: feed,
+    isLoading: isLoadingFeed,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage
   } = useInfiniteDetections({
     profiles: [profileIdNumber],
     tags: {
       relevancy_detected_correctly: [true, false]
     }
   });
-  
+
   const { mutateAsync: analyzePostMutateAsync } = useAnalyzePost();
 
   const isAnalyzingPost = (postId: string) => postsBeingAnalyzed.includes(postId);
 
   const handleAnalyzePost = async (postId: string) => {
     // Find the post to analyze
-    const postToAnalyze = playgroundPosts.find(p => 
-      p.originalPost.detection && 
+    const postToAnalyze = playgroundPosts.find(p =>
+      p.originalPost.detection &&
       p.originalPost.detection.source_id === postId
     )?.originalPost;
-    
+
     if (!postToAnalyze || postsBeingAnalyzed.includes(postId)) {
       return;
     }
@@ -66,14 +66,14 @@ export function PlaygroundPostList({
       source: postToAnalyze.detection?.source || 'unknown',
       source_id: postId,
       relevancy_filter: profileSettings.relevancy_filter,
-      extracted_properties: profileSettings.extracted_properties
+      extracted_properties: profileSettings.extracted_properties,
     };
 
     setPostsBeingAnalyzed(prev => [...prev, postId]);
 
     try {
       const newDetection = await analyzePostMutateAsync(request);
-      
+
       setPlaygroundPosts(prevPosts =>
         prevPosts.map(p =>
           p.originalPost.detection && p.originalPost.detection.source_id === postId
@@ -87,11 +87,11 @@ export function PlaygroundPostList({
       setPostsBeingAnalyzed(prev => prev.filter(id => id !== postId));
     }
   };
-  
+
   useEffect(() => {
     if (feed) {
       const allFeedPosts = feed.pages.flatMap(page => page);
-      
+
       setPlaygroundPosts(prevPlaygroundPosts => {
         // Create a Set of existing post IDs for quick lookup
         const existingPostIds = new Set(
@@ -99,27 +99,27 @@ export function PlaygroundPostList({
             .filter(p => p.originalPost.detection)
             .map(p => p.originalPost.detection?.source_id)
         );
-        
+
         // Map new posts from feed that we haven't seen before
         const newPostsFromFeed = allFeedPosts
           .filter(fp => fp.detection && !existingPostIds.has(fp.detection.source_id))
-          .map(fp => ({ 
-            originalPost: fp, 
+          .map(fp => ({
+            originalPost: fp,
             newDetection: undefined
           }));
-        
+
         // Update existing posts with fresh data
         const updatedPosts = prevPlaygroundPosts.map(pp => {
           // Find matching post by source_id
-          const updatedFeedPost = pp.originalPost.detection && 
-            allFeedPosts.find(fp => 
-              fp.detection && 
+          const updatedFeedPost = pp.originalPost.detection &&
+            allFeedPosts.find(fp =>
+              fp.detection &&
               fp.detection.source_id === pp.originalPost.detection?.source_id
             );
-            
+
           if (updatedFeedPost) {
-            return { 
-              ...pp, 
+            return {
+              ...pp,
               originalPost: updatedFeedPost,
               // Keep the newDetection if it exists, otherwise use the detection from feed
               newDetection: pp.newDetection
@@ -127,7 +127,7 @@ export function PlaygroundPostList({
           }
           return pp;
         });
-        
+
         return [...updatedPosts, ...newPostsFromFeed];
       });
     }
@@ -135,7 +135,7 @@ export function PlaygroundPostList({
 
   useEffect(() => {
     const newStats: BenchmarkStats = {
-      total: playgroundPosts.length, 
+      total: playgroundPosts.length,
       analyzed: 0,
       correct: 0,
       wrong: 0,
@@ -143,31 +143,25 @@ export function PlaygroundPostList({
 
     playgroundPosts.forEach(p => {
       if (!p.originalPost.detection) return;
-      
+
       const postId = p.originalPost.detection.source_id;
-      
+
       if (postsBeingAnalyzed.includes(postId)) {
         return;
       }
 
-      const detectionToConsider = p.newDetection ?? p.originalPost.detection;
-      // Use tags.relevancy_detected_correctly to determine if user classified it differently
-      const expected = p.originalPost.tags?.relevancy_detected_correctly !== undefined
-        ? p.originalPost.detection.is_relevant === p.originalPost.tags.relevancy_detected_correctly
-        : undefined;
+      const isCorrect = isPostCorrect(p);
 
-      if (detectionToConsider) {
+      if (isCorrect !== undefined) {
         newStats.analyzed++;
-        if (expected !== undefined) {
-          if (detectionToConsider.is_relevant === expected) {
-            newStats.correct++;
-          } else {
-            newStats.wrong++;
-          }
+        if (isCorrect) {
+          newStats.correct++;
+        } else {
+          newStats.wrong++;
         }
       }
     });
-    
+
     setStats(newStats);
   }, [playgroundPosts, postsBeingAnalyzed]);
 
@@ -175,16 +169,16 @@ export function PlaygroundPostList({
     if (correctnessFilter === 'all') {
       return true;
     }
-    
+
     if (!p.originalPost.detection) return false;
-    
+
     const detectionToConsider = p.newDetection ?? p.originalPost.detection;
     // Use tags.relevancy_detected_correctly to determine if user classified it differently
     const expected = p.originalPost.tags?.relevancy_detected_correctly !== undefined
       ? p.originalPost.detection.is_relevant === p.originalPost.tags.relevancy_detected_correctly
       : undefined;
-    
-    if (!detectionToConsider || expected === undefined) return false; 
+
+    if (!detectionToConsider || expected === undefined) return false;
 
     const actual = detectionToConsider.is_relevant;
     const isCorrect = actual === expected;
@@ -208,22 +202,22 @@ export function PlaygroundPostList({
       }
       return Promise.resolve();
     }));
-    
+
     setRowSelection({});
   };
 
   const handleAnalyzeIncorrect = async () => {
     const incorrectPosts = playgroundPosts.filter(p => {
       if (!p.originalPost.detection) return false;
-      
+
       const detection = p.newDetection ?? p.originalPost.detection;
       const expected = p.originalPost.tags?.relevancy_detected_correctly !== undefined
         ? p.originalPost.detection.is_relevant === p.originalPost.tags.relevancy_detected_correctly
         : undefined;
-        
+
       return detection && expected !== undefined && detection.is_relevant !== expected;
     });
-    
+
     if (incorrectPosts.length === 0) return;
 
     await Promise.all(incorrectPosts.map(post => {
@@ -236,7 +230,7 @@ export function PlaygroundPostList({
 
   const handleAnalyzeAll = async () => {
     if (playgroundPosts.length === 0) return;
-    
+
     await Promise.all(playgroundPosts.map(post => {
       if (post.originalPost.detection) {
         return handleAnalyzePost(post.originalPost.detection.source_id);
@@ -246,16 +240,6 @@ export function PlaygroundPostList({
   };
 
   const selectedCount = Object.keys(rowSelection).filter(k => rowSelection[k]).length;
-  const incorrectCountForAllPosts = playgroundPosts.filter(p => {
-    if (!p.originalPost.detection) return false;
-    
-    const detection = p.newDetection ?? p.originalPost.detection;
-    const expected = p.originalPost.tags?.relevancy_detected_correctly !== undefined
-      ? p.originalPost.detection.is_relevant === p.originalPost.tags.relevancy_detected_correctly
-      : undefined;
-      
-    return detection && expected !== undefined && detection.is_relevant !== expected;
-  }).length;
 
   if (isLoadingFeed && !feed) {
     return (
@@ -267,27 +251,27 @@ export function PlaygroundPostList({
 
   return (
     <div>
-      <PlaygroundStats 
+      <PlaygroundStats
         stats={stats}
       />
 
       <div className="mb-4 flex flex-wrap items-center gap-4">
         <div className="flex flex-wrap gap-2">
-          <Button 
-            onClick={handleAnalyzeSelected} 
+          <Button
+            onClick={handleAnalyzeSelected}
             disabled={selectedCount === 0 || postsBeingAnalyzed.length > 0}
           >
             Analyze Selected ({selectedCount})
           </Button>
-          <Button 
-            onClick={handleAnalyzeIncorrect} 
-            disabled={incorrectCountForAllPosts === 0 || postsBeingAnalyzed.length > 0}
+          <Button
+            onClick={handleAnalyzeIncorrect}
+            disabled={stats.wrong === 0 || postsBeingAnalyzed.length > 0}
             variant="outline"
           >
-            Analyze Incorrect ({incorrectCountForAllPosts})
+            Analyze Incorrect ({stats.wrong})
           </Button>
-          <Button 
-            onClick={handleAnalyzeAll} 
+          <Button
+            onClick={handleAnalyzeAll}
             disabled={playgroundPosts.length === 0 || postsBeingAnalyzed.length > 0}
             variant="outline"
           >
@@ -315,14 +299,14 @@ export function PlaygroundPostList({
           <TabsTrigger value="all">
             All ({stats.total})
           </TabsTrigger>
-          <TabsTrigger 
+          <TabsTrigger
             value="correct"
             disabled={stats.correct === 0 && correctnessFilter !== 'correct'}
           >
             Correct ({stats.correct})
           </TabsTrigger>
-          <TabsTrigger 
-            value="incorrect" 
+          <TabsTrigger
+            value="incorrect"
             disabled={stats.wrong === 0 && correctnessFilter !== 'incorrect'}
           >
             Incorrect ({stats.wrong})
@@ -341,14 +325,14 @@ export function PlaygroundPostList({
             : "No posts match the current filters or count selection."}
         </Card>
       ) : (
-        <DataTable 
-          columns={tableColumns} 
-          data={filteredAndSlicedPosts} 
-          rowSelection={rowSelection} 
-          onRowSelectionChange={setRowSelection} 
+        <DataTable
+          columns={tableColumns}
+          data={filteredAndSlicedPosts}
+          rowSelection={rowSelection}
+          onRowSelectionChange={setRowSelection}
         />
       )}
-      
+
       {hasNextPage && (
         <div className="flex justify-center mt-4">
           <button

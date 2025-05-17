@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft } from 'lucide-react'
@@ -9,19 +8,27 @@ import {
   useUpdateProfile,
   useAddProfilesToSubreddit
 } from '@/api/hooks'
-import type { ProfileSettings, ProfileUpdate } from '@/api/models'
+import type { ProfileUpdate } from '@/api/models'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useState, useCallback } from 'react'
 
 export default function EditProfile() {
   const { profileId } = useParams<{ profileId: string }>()
-  const numberProfileId = parseInt(profileId || '0')
+  const numberProfileId = parseInt(profileId || '-1')
   
   const { data: profile, isLoading: isLoadingProfile } = useProfile(numberProfileId)
   const { mutate: updateProfile, isPending: isUpdatingProfile } = useUpdateProfile()
   const {mutate: addProfilesToSubreddit, isPending: isAddingProfilesToSubreddit} = useAddProfilesToSubreddit()
 
-  const handleUpdateProfile = (update: ProfileUpdate, subreddits: string[]) => {
-    if (!profileId) return
+
+  const [draftUpdateData, setDraftUpdateData] = useState<ProfileUpdate | null>(null)
+
+  const handleEditProfile = useCallback((update: ProfileUpdate, _subreddits: string[]) => {
+    setDraftUpdateData(update)
+  }, [])
+
+  const handleSaveProfile = useCallback((update: ProfileUpdate, subreddits: string[]) => {
+    if (numberProfileId == 0) return
 
     // Store draft profile for testing
     updateProfile(
@@ -39,7 +46,7 @@ export default function EditProfile() {
         profileIds: [numberProfileId],
       })
     }
-  }
+  }, [numberProfileId, updateProfile, addProfilesToSubreddit])
 
   return (
     <div className="container py-8 max-w-7xl">
@@ -65,7 +72,8 @@ export default function EditProfile() {
           ) : profile ? (
             <ProfileEditor 
               initialProfile={profile}
-              onSubmit={handleUpdateProfile} 
+              onEdit={handleEditProfile}
+              onSubmit={handleSaveProfile}
               isSubmitting={isUpdatingProfile || isAddingProfilesToSubreddit}
             />
           ) : (
@@ -80,10 +88,10 @@ export default function EditProfile() {
           <div className="mb-4 text-sm text-muted-foreground">
             Update profile settings and test them against previously labeled posts to see how the changes affect relevancy detection.
           </div>
-          {profileId ? (
+          {profileId && profile?.default_settings ? (
             <PlaygroundPostList
               profileId={profileId}
-              profileSettings={profile?.default_settings as ProfileSettings}
+              profileSettings={draftUpdateData?.default_settings || profile.default_settings}
             />
           ) : (
             <div className="p-4 bg-orange-100 dark:bg-orange-900/20 text-orange-800 dark:text-orange-400 rounded-md">
