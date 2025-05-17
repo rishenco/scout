@@ -386,13 +386,14 @@ func (s *ScoutStorage) UpdateTags(ctx context.Context, detectionID int64, update
 	}
 
 	query := `
-		UPDATE scout.detection_tags
-		SET relevancy_detected_correctly = $1
-		WHERE detection_id = $2
+		INSERT INTO scout.detection_tags (detection_id, relevancy_detected_correctly)
+		VALUES ($1, $2)
+		ON CONFLICT (detection_id) DO UPDATE
+		SET relevancy_detected_correctly = $2
 		RETURNING relevancy_detected_correctly
 	`
 
-	row := s.pool.QueryRow(ctx, query, update.RelevancyDetectedCorrectly.Value, detectionID)
+	row := s.pool.QueryRow(ctx, query, detectionID, update.RelevancyDetectedCorrectly.Value)
 
 	var relevancyDetectedCorrectly *bool
 

@@ -67,35 +67,10 @@ export function useDeleteProfile() {
 const DETECTION_PAGE_SIZE = 10;
 
 // Detections (replaces useInfiniteFeed)
-export function useInfiniteDetections(params: {
-  profiles?: number[];
-  isRelevant?: boolean;
-  sources?: string[];
-  tags?: {
-    relevancy_detected_correctly?: boolean[];
-  }
-}) {
+export function useInfiniteDetections(filter: DetectionFilter) {
   return useInfiniteQuery<ListedDetection[], Error>({
-    queryKey: ['detections', params],
+    queryKey: ['detections', filter],
     queryFn: ({ pageParam }) => {
-      const filter: DetectionFilter = {};
-      
-      if (params.profiles) {
-        filter.profiles = params.profiles;
-      }
-      
-      if (params.isRelevant !== undefined) {
-        filter.is_relevant = params.isRelevant;
-      }
-      
-      if (params.sources) {
-        filter.sources = params.sources;
-      }
-
-      if (params.tags) {
-        filter.tags = params.tags;
-      }
-      
       return apiClient.detections.listDetections({
         lastSeenId: pageParam as number | undefined,
         limit: DETECTION_PAGE_SIZE,
