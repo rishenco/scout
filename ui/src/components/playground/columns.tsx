@@ -49,7 +49,7 @@ export const columns = (
     enableHiding: false,
   },
   {
-    accessorKey: "originalPost.post.title",
+    accessorKey: "originalPost.source_post.post.title",
     header: ({ column }) => {
       return (
         <Button
@@ -61,7 +61,7 @@ export const columns = (
         </Button>
       )
     },
-    cell: ({ row }) => <div className="truncate max-w-xs">{row.getValue("originalPost_post_title")}</div>,
+    cell: ({ row }) => <div className="truncate max-w-xs">{row.getValue("originalPost_source_post_post_title")}</div>,
   },
   {
     accessorKey: "originalPost.detection.is_relevant",
@@ -69,9 +69,9 @@ export const columns = (
     cell: ({ row }) => getRelevancyBadge(row.getValue("originalPost_detection_is_relevant")),
   },
   {
-    accessorKey: "originalPost.user_classification.is_relevant",
+    accessorKey: "originalPost.tags.relevancy_detected_correctly",
     header: "Expected",
-    cell: ({ row }) => getRelevancyBadge(row.getValue("originalPost_user_classification_is_relevant")),
+    cell: ({ row }) => getRelevancyBadge(row.getValue("originalPost_tags_relevancy_detected_correctly")),
   },
   {
     accessorKey: "newDetection.is_relevant",
