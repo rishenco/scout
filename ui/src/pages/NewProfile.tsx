@@ -20,7 +20,7 @@ export default function NewProfile() {
     if (update.default_settings) {
       const extractedProperties: Record<string, string> = {}
 
-      for (const [key, value] of Object.entries(update.default_settings)) {
+      for (const [key, value] of Object.entries(update.default_settings.extracted_properties || {})) {
         if (value !== null) {
           extractedProperties[key] = value;
         }

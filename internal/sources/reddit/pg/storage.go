@@ -172,7 +172,7 @@ func (s *Storage) GetPostsForEnrichment(ctx context.Context, postCreatedBefore t
 	return postIDs, nil
 }
 
-func (s *Storage) GetPostsForScheduling(ctx context.Context, minScore int, limit int) (posts []reddit.PostAndComments, err error) {
+func (s *Storage) GetPostsForScheduling(ctx context.Context, batchSize int, minScore int) (posts []reddit.PostAndComments, err error) {
 	query := `
 		SELECT enriched_post_json
 		FROM reddit.posts
@@ -181,7 +181,7 @@ func (s *Storage) GetPostsForScheduling(ctx context.Context, minScore int, limit
 		LIMIT $2
 	`
 
-	rows, err := s.pool.Query(ctx, query, minScore, limit)
+	rows, err := s.pool.Query(ctx, query, minScore, batchSize)
 	if err != nil {
 		return nil, fmt.Errorf("select: %w", err)
 	}
@@ -203,6 +203,10 @@ func (s *Storage) GetPostsForScheduling(ctx context.Context, minScore int, limit
 		}
 
 		posts = append(posts, post)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows error: %w", err)
 	}
 
 	return posts, nil
