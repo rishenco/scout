@@ -439,6 +439,24 @@ func (s *Storage) RemoveProfilesFromSubreddit(ctx context.Context, subreddit str
 	return nil
 }
 
+func (s *Storage) RemoveProfileFromAllSubredditSettings(ctx context.Context, profileID int64) error {
+	query := `
+		UPDATE reddit.subreddit_settings
+		SET profiles = COALESCE((
+			SELECT array_agg(p)
+			FROM unnest(profiles) AS p
+			WHERE p != $1
+		), '{}')
+	`
+
+	_, err := s.pool.Exec(ctx, query, profileID)
+	if err != nil {
+		return fmt.Errorf("exec: %w", err)
+	}
+
+	return nil
+}
+
 func (s *Storage) GetScheduledPostIDsFromSubreddits(ctx context.Context, subreddits []string, days int, limit int) ([]string, error) {
 	query := `
 		SELECT post_id
