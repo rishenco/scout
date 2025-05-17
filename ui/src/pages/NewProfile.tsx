@@ -3,40 +3,52 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { ProfileEditor } from '@/components/ProfileEditor';
-import { useCreateProfile } from '@/api/hooks';
-import type { ProfileSettings, Profile, ProfileUpdate } from '@/api/models';
+import { useAddProfilesToSubreddit, useCreateProfile } from '@/api/hooks';
+import type { Profile, ProfileUpdate } from '@/api/models';
 
 export default function NewProfile() {
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
   const { mutate: createProfile, isPending } = useCreateProfile();
-
-  const handleCreateProfile = (profileData: ProfileUpdate) => {
+  const { mutate: addProfilesToSubreddit } = useAddProfilesToSubreddit();
+  const handleCreateProfile = (update: ProfileUpdate, subreddits: string[]) => {
     const profile: Profile = {
       id: 0,
-      name: profileData.name || "New Profile",
+      name: update.name || "New Profile",
     }
 
-    if (profileData.default_settings) {
+    if (update.default_settings) {
+      const extractedProperties: Record<string, string> = {}
+
+      for (const [key, value] of Object.entries(update.default_settings)) {
+        if (value !== null) {
+          extractedProperties[key] = value;
+        }
+      }
+
       profile.default_settings = {
-        relevancy_filter: profileData.default_settings.relevancy_filter || "",
-        extracted_properties: profileData.default_settings.extracted_properties || {},
+        relevancy_filter: update.default_settings.relevancy_filter || "",
+        extracted_properties: extractedProperties,
       };
     }
 
-    if (profileData.sources_settings) {
-      profile.sources_settings = profileData.sources_settings;
-    }
-
     setError(null);
+
     createProfile(profile, {
       onSuccess: (id) => {
         navigate(`/profiles/${id}`);
+
+        for (const subreddit of subreddits) {
+          addProfilesToSubreddit({
+            subreddit,
+            profileIds: [id],
+          })
+        }
       },
       onError: (err) => {
         setError(`Failed to create profile: ${err.message}`);
       },
-    });
+    });    
   };
 
   return (

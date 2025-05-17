@@ -1,15 +1,15 @@
 import { ThumbsUp, ThumbsDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import type { ListedDetection, DetectionTagUpdateRequest } from '@/api/models'
+import type { ListedDetection } from '@/api/models'
 import { useUpdateDetectionTags } from '@/api/hooks'
 
-interface PostReactionProps {
-  detection: ListedDetection
+interface DetectionReactionProps {
+  listedDetection: ListedDetection
 }
 
-export function PostReaction({ detection }: PostReactionProps) {
+export function DetectionReaction({ listedDetection }: DetectionReactionProps) {
   // will be updated with cache, no need to update manually
-  const isRelevant = detection.tags?.relevancy_detected_correctly === null ? undefined : detection.tags?.relevancy_detected_correctly
+  const isRelevant = listedDetection.tags?.relevancy_detected_correctly === null ? undefined : listedDetection.tags?.relevancy_detected_correctly
 
   const { mutate: updateDetectionTags, isPending: isLoading } = useUpdateDetectionTags()
 
@@ -18,7 +18,7 @@ export function PostReaction({ detection }: PostReactionProps) {
 
     updateDetectionTags(
       {
-        detectionId: detection.detection.id,
+        detectionId: listedDetection.detection.id,
         tags: {
           relevancy_detected_correctly: currentReactionIsSame ? null : relevant,
         },

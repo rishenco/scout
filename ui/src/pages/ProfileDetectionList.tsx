@@ -1,10 +1,10 @@
 import { useParams, Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, Settings } from 'lucide-react'
-import { PostFeed } from '@/components/PostFeed'
+import { DetectionList } from '@/components/DetectionList'
 import { useProfile, useSubredditsForProfile } from '@/api/hooks'
 
-export default function ProfileFeed() {
+export default function ProfileDetectionList() {
   const { profileId } = useParams<{ profileId: string }>()
   const { data: profile } = useProfile(parseInt(profileId || '0'))
   const { data: subreddits } = useSubredditsForProfile(parseInt(profileId || '0'))
@@ -38,7 +38,7 @@ export default function ProfileFeed() {
         </div>
       )}
       
-      <PostFeed profileId={profileId} />
+      <DetectionList profileId={parseInt(profileId || '0')} />
     </div>
   )
 } 
