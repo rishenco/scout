@@ -531,3 +531,36 @@ func (s *ScoutStorage) ListDetections(ctx context.Context, query models.Detectio
 
 	return result, nil
 }
+
+func (s *ScoutStorage) GetPresentDetections(ctx context.Context, source string, sourceIDs []string) ([]string, error) {
+	query := `
+		SELECT DISTINCT source_id
+		FROM scout.detections
+		WHERE source = $1 AND source_id = ANY($2)
+	`
+
+	rows, err := s.pool.Query(ctx, query, source, sourceIDs)
+	if err != nil {
+		return nil, fmt.Errorf("query: %w", err)
+	}
+
+	defer rows.Close()
+
+	result := make([]string, 0)
+
+	for rows.Next() {
+		var sourceID string
+
+		if err := rows.Scan(&sourceID); err != nil {
+			return nil, fmt.Errorf("scan: %w", err)
+		}
+
+		result = append(result, sourceID)
+	}
+
+	if rows.Err() != nil {
+		return nil, fmt.Errorf("rows err: %w", err)
+	}
+
+	return result, nil
+}
