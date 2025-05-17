@@ -9,7 +9,7 @@ import {
   useUpdateProfile,
   useAddProfilesToSubreddit
 } from '@/api/hooks'
-import type { ProfileSettings, Profile, ProfileUpdate } from '@/api/models'
+import type { ProfileSettings, ProfileUpdate } from '@/api/models'
 import { Skeleton } from '@/components/ui/skeleton'
 
 export default function EditProfile() {
@@ -66,7 +66,7 @@ export default function EditProfile() {
             <ProfileEditor 
               initialProfile={profile}
               onSubmit={handleUpdateProfile} 
-              isSubmitting={isUpdatingProfile}
+              isSubmitting={isUpdatingProfile || isAddingProfilesToSubreddit}
             />
           ) : (
             <div className="p-4 bg-orange-100 dark:bg-orange-900/20 text-orange-800 dark:text-orange-400 rounded-md">

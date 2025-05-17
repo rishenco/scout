@@ -97,4 +97,71 @@ export interface SubredditSettings {
 
 export interface SubredditProfilesRequest {
     profile_ids: number[];
-} 
+}
+
+// Represents the top-level API response
+export interface RedditPostAndComments {
+    post: RedditPost;
+    comments: RedditComment[];
+}
+
+// Model for the main post
+export interface RedditPost {
+    id: string;
+    url: string;
+    name: string;
+    likes: number | null;
+    saved: boolean;
+    score: number;
+    title: string;
+    author: string;
+    edited: string;                // ISO timestamp
+    locked: boolean;
+    is_self: boolean;
+    over_18: boolean;
+    spoiler: boolean;
+    selftext: string;
+    stickied: boolean;
+    permalink: string;
+    subreddit: string;
+    created_utc: string;           // ISO timestamp
+    num_comments: number;
+    subreddit_id: string;
+    upvote_ratio: number;
+    author_fullname: string;
+    subreddit_subscribers: number;
+    subreddit_name_prefixed: string;
+}
+
+// Wrapper for nested replies in a comment
+export interface RedditCommentReplies {
+    comments?: RedditComment[];          // May be absent or an empty array
+}
+
+// Model for each comment, recursive via CommentReplies
+export interface RedditComment {
+    id: string;
+    body: string;
+    name: string;
+    likes: number | null;
+    saved: boolean;
+    score: number;
+    author: string;
+    edited: string;                // ISO timestamp
+    locked: boolean;
+    link_id: string;
+    over_18: boolean;
+    replies: RedditCommentReplies;
+    can_gild: boolean;
+    stickied: boolean;
+    parent_id: string;
+    permalink: string;
+    subreddit: string;
+    created_utc: string;           // ISO timestamp
+    is_submitter: boolean;
+    score_hidden: boolean;
+    subreddit_id: string;
+    author_fullname: string;
+    controversiality: number;
+    subreddit_name_prefixed: string;
+}
