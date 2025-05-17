@@ -10,7 +10,7 @@ drop-db:
 	set -a && \
 	. ./.env && \
 	GOOSE_DRIVER=postgres \
-	GOOSE_DBSTRING=$(GOOSE_POSTGRES_CONN_STRING) \
+	GOOSE_DBSTRING=$$GOOSE_POSTGRES_CONN_STRING \
 	goose -dir ./migrations reset
 
 .PHONY: init-db
@@ -18,7 +18,7 @@ init-db:
 	set -a && \
 	. ./.env && \
 	GOOSE_DRIVER=postgres \
-	GOOSE_DBSTRING=$(GOOSE_POSTGRES_CONN_STRING) \
+	GOOSE_DBSTRING=$$GOOSE_POSTGRES_CONN_STRING \
 	goose -dir ./migrations up
 
 .PHONY: reinit-db
@@ -33,3 +33,17 @@ open-swagger:
 .PHONY: generate
 generate:
 	go generate ./...
+	cd ui && \
+	npx @hey-api/openapi-ts \
+		--input ../api/swagger.yaml \
+		--output ./src/api/generated \
+		--client @hey-api/client-axios && \
+	cd ..
+
+.PHONY: up-db
+up-db:
+	docker compose up -d postgres
+
+.PHONY: down-db
+down-db:
+	docker compose down postgres

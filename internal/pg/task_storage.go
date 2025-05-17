@@ -66,8 +66,14 @@ func (s *TaskStorage) Add(ctx context.Context, tasks []models.AnalysisTask) erro
 func (s *TaskStorage) Claim(ctx context.Context) (task models.AnalysisTask, anyTask bool, err error) {
 	query := `
 		UPDATE scout.analysis_tasks
-		SET is_claimed = true, claimed_at = now()
-		WHERE is_claimed = false AND is_committed = false
+		SET is_claimed = true, claimed_at = NOW()
+		WHERE id = (
+			SELECT id
+			FROM scout.analysis_tasks
+			WHERE is_claimed = false AND is_committed = false
+			LIMIT 1
+			FOR UPDATE SKIP LOCKED
+		)
 		RETURNING id, source, source_id, profile_id, should_save
 	`
 

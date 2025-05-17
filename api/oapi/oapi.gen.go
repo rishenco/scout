@@ -86,37 +86,27 @@ type Error struct {
 
 // ListedDetection defines model for ListedDetection.
 type ListedDetection struct {
-	Detection  *Detection              `json:"detection,omitempty"`
+	Detection  Detection               `json:"detection"`
 	SourcePost *map[string]interface{} `json:"source_post,omitempty"`
 	Tags       *DetectionTags          `json:"tags,omitempty"`
 }
 
 // Profile defines model for Profile.
 type Profile struct {
-	CreatedAt       string                      `json:"created_at"`
+	CreatedAt       *string                     `json:"created_at,omitempty"`
 	DefaultSettings *ProfileSettings            `json:"default_settings,omitempty"`
 	Id              int                         `json:"id"`
 	Name            string                      `json:"name"`
 	SourcesSettings *map[string]ProfileSettings `json:"sources_settings,omitempty"`
-	UpdatedAt       string                      `json:"updated_at"`
-}
-
-// ProfileJumpstartRequest defines model for ProfileJumpstartRequest.
-type ProfileJumpstartRequest struct {
-	// JumpstartPeriod How many days to go back in time to analyze. If -1, analyze all posts.
-	JumpstartPeriod *int `json:"jumpstart_period,omitempty"`
-
-	// Limit How many posts to analyze. If -1, analyze all posts.
-	Limit     *int `json:"limit,omitempty"`
-	ProfileId int  `json:"profile_id"`
+	UpdatedAt       *string                     `json:"updated_at,omitempty"`
 }
 
 // ProfileSettings defines model for ProfileSettings.
 type ProfileSettings struct {
-	CreatedAt           string            `json:"created_at"`
+	CreatedAt           *string           `json:"created_at,omitempty"`
 	ExtractedProperties map[string]string `json:"extracted_properties"`
 	RelevancyFilter     string            `json:"relevancy_filter"`
-	UpdatedAt           string            `json:"updated_at"`
+	UpdatedAt           *string           `json:"updated_at,omitempty"`
 }
 
 // ProfileSettingsUpdate defines model for ProfileSettingsUpdate.
@@ -1221,6 +1211,7 @@ func (r PostApiDetectionsListResponse) StatusCode() int {
 type PutApiDetectionsTagsResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	JSON200      *DetectionTags
 	JSON500      *Error
 }
 
@@ -1728,6 +1719,13 @@ func ParsePutApiDetectionsTagsResponse(rsp *http.Response) (*PutApiDetectionsTag
 	}
 
 	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest DetectionTags
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest Error
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -2480,12 +2478,13 @@ type PutApiDetectionsTagsResponseObject interface {
 	VisitPutApiDetectionsTagsResponse(w http.ResponseWriter) error
 }
 
-type PutApiDetectionsTags204Response struct {
-}
+type PutApiDetectionsTags200JSONResponse DetectionTags
 
-func (response PutApiDetectionsTags204Response) VisitPutApiDetectionsTagsResponse(w http.ResponseWriter) error {
-	w.WriteHeader(204)
-	return nil
+func (response PutApiDetectionsTags200JSONResponse) VisitPutApiDetectionsTagsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
 }
 
 type PutApiDetectionsTags401Response struct {
@@ -3313,33 +3312,31 @@ func (sh *strictHandler) GetApiSourcesRedditSubredditsWithProfile(ctx *gin.Conte
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
-	"uEwJX0ltxi9+GY7wdrr9LwAA//9Vp5uGnCoAAA==",
+	"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",
+	"/gkAAP//VlgPKBYnAAA=",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file
