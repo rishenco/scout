@@ -87,12 +87,14 @@ type Error struct {
 // ListedDetection defines model for ListedDetection.
 type ListedDetection struct {
 	Detection  Detection               `json:"detection"`
+	Detection  Detection               `json:"detection"`
 	SourcePost *map[string]interface{} `json:"source_post,omitempty"`
 	Tags       *DetectionTags          `json:"tags,omitempty"`
 }
 
 // Profile defines model for Profile.
 type Profile struct {
+	CreatedAt       *string                     `json:"created_at,omitempty"`
 	CreatedAt       *string                     `json:"created_at,omitempty"`
 	DefaultSettings *ProfileSettings            `json:"default_settings,omitempty"`
 	Id              int                         `json:"id"`
@@ -101,11 +103,24 @@ type Profile struct {
 	UpdatedAt       *string                     `json:"updated_at,omitempty"`
 }
 
+// ProfileJumpstartRequest defines model for ProfileJumpstartRequest.
+type ProfileJumpstartRequest struct {
+	// JumpstartPeriod How many days to go back in time to analyze. If null, analyze all posts.
+	JumpstartPeriod *int `json:"jumpstart_period,omitempty"`
+
+	// Limit How many posts to analyze. If null, analyze all posts.
+	Limit     *int `json:"limit,omitempty"`
+	ProfileId int  `json:"profile_id"`
+	UpdatedAt       *string                     `json:"updated_at,omitempty"`
+}
+
 // ProfileSettings defines model for ProfileSettings.
 type ProfileSettings struct {
 	CreatedAt           *string           `json:"created_at,omitempty"`
+	CreatedAt           *string           `json:"created_at,omitempty"`
 	ExtractedProperties map[string]string `json:"extracted_properties"`
 	RelevancyFilter     string            `json:"relevancy_filter"`
+	UpdatedAt           *string           `json:"updated_at,omitempty"`
 	UpdatedAt           *string           `json:"updated_at,omitempty"`
 }
 
@@ -157,6 +172,9 @@ type PostApiProfilesJSONRequestBody = Profile
 
 // PutApiProfilesIdJSONRequestBody defines body for PutApiProfilesId for application/json ContentType.
 type PutApiProfilesIdJSONRequestBody = ProfileUpdate
+
+// PostApiProfilesIdJumpstartJSONRequestBody defines body for PostApiProfilesIdJumpstart for application/json ContentType.
+type PostApiProfilesIdJumpstartJSONRequestBody = ProfileJumpstartRequest
 
 // PostApiSourcesRedditSubredditsSubredditAddProfilesJSONRequestBody defines body for PostApiSourcesRedditSubredditsSubredditAddProfiles for application/json ContentType.
 type PostApiSourcesRedditSubredditsSubredditAddProfilesJSONRequestBody PostApiSourcesRedditSubredditsSubredditAddProfilesJSONBody
@@ -270,6 +288,11 @@ type ClientInterface interface {
 	PutApiProfilesIdWithBody(ctx context.Context, id int, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	PutApiProfilesId(ctx context.Context, id int, body PutApiProfilesIdJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// PostApiProfilesIdJumpstartWithBody request with any body
+	PostApiProfilesIdJumpstartWithBody(ctx context.Context, id int, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	PostApiProfilesIdJumpstart(ctx context.Context, id int, body PostApiProfilesIdJumpstartJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetApiSourcesRedditSubreddits request
 	GetApiSourcesRedditSubreddits(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -434,6 +457,30 @@ func (c *Client) PutApiProfilesIdWithBody(ctx context.Context, id int, contentTy
 
 func (c *Client) PutApiProfilesId(ctx context.Context, id int, body PutApiProfilesIdJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewPutApiProfilesIdRequest(c.Server, id, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) PostApiProfilesIdJumpstartWithBody(ctx context.Context, id int, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPostApiProfilesIdJumpstartRequestWithBody(c.Server, id, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) PostApiProfilesIdJumpstart(ctx context.Context, id int, body PostApiProfilesIdJumpstartJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPostApiProfilesIdJumpstartRequest(c.Server, id, body)
 	if err != nil {
 		return nil, err
 	}
@@ -818,6 +865,53 @@ func NewPutApiProfilesIdRequestWithBody(server string, id int, contentType strin
 	return req, nil
 }
 
+// NewPostApiProfilesIdJumpstartRequest calls the generic PostApiProfilesIdJumpstart builder with application/json body
+func NewPostApiProfilesIdJumpstartRequest(server string, id int, body PostApiProfilesIdJumpstartJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewPostApiProfilesIdJumpstartRequestWithBody(server, id, "application/json", bodyReader)
+}
+
+// NewPostApiProfilesIdJumpstartRequestWithBody generates requests for PostApiProfilesIdJumpstart with any type of body
+func NewPostApiProfilesIdJumpstartRequestWithBody(server string, id int, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/profiles/%s/jumpstart", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
 // NewGetApiSourcesRedditSubredditsRequest generates requests for GetApiSourcesRedditSubreddits
 func NewGetApiSourcesRedditSubredditsRequest(server string) (*http.Request, error) {
 	var err error
@@ -1061,6 +1155,11 @@ type ClientWithResponsesInterface interface {
 
 	PutApiProfilesIdWithResponse(ctx context.Context, id int, body PutApiProfilesIdJSONRequestBody, reqEditors ...RequestEditorFn) (*PutApiProfilesIdResponse, error)
 
+	// PostApiProfilesIdJumpstartWithBodyWithResponse request with any body
+	PostApiProfilesIdJumpstartWithBodyWithResponse(ctx context.Context, id int, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PostApiProfilesIdJumpstartResponse, error)
+
+	PostApiProfilesIdJumpstartWithResponse(ctx context.Context, id int, body PostApiProfilesIdJumpstartJSONRequestBody, reqEditors ...RequestEditorFn) (*PostApiProfilesIdJumpstartResponse, error)
+
 	// GetApiSourcesRedditSubredditsWithResponse request
 	GetApiSourcesRedditSubredditsWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetApiSourcesRedditSubredditsResponse, error)
 
@@ -1127,6 +1226,7 @@ func (r PostApiDetectionsListResponse) StatusCode() int {
 type PutApiDetectionsTagsResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	JSON200      *DetectionTags
 	JSON200      *DetectionTags
 	JSON500      *Error
 }
@@ -1256,6 +1356,28 @@ func (r PutApiProfilesIdResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r PutApiProfilesIdResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type PostApiProfilesIdJumpstartResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON500      *Error
+}
+
+// Status returns HTTPResponse.Status
+func (r PostApiProfilesIdJumpstartResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r PostApiProfilesIdJumpstartResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -1464,6 +1586,23 @@ func (c *ClientWithResponses) PutApiProfilesIdWithResponse(ctx context.Context, 
 	return ParsePutApiProfilesIdResponse(rsp)
 }
 
+// PostApiProfilesIdJumpstartWithBodyWithResponse request with arbitrary body returning *PostApiProfilesIdJumpstartResponse
+func (c *ClientWithResponses) PostApiProfilesIdJumpstartWithBodyWithResponse(ctx context.Context, id int, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PostApiProfilesIdJumpstartResponse, error) {
+	rsp, err := c.PostApiProfilesIdJumpstartWithBody(ctx, id, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePostApiProfilesIdJumpstartResponse(rsp)
+}
+
+func (c *ClientWithResponses) PostApiProfilesIdJumpstartWithResponse(ctx context.Context, id int, body PostApiProfilesIdJumpstartJSONRequestBody, reqEditors ...RequestEditorFn) (*PostApiProfilesIdJumpstartResponse, error) {
+	rsp, err := c.PostApiProfilesIdJumpstart(ctx, id, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePostApiProfilesIdJumpstartResponse(rsp)
+}
+
 // GetApiSourcesRedditSubredditsWithResponse request returning *GetApiSourcesRedditSubredditsResponse
 func (c *ClientWithResponses) GetApiSourcesRedditSubredditsWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetApiSourcesRedditSubredditsResponse, error) {
 	rsp, err := c.GetApiSourcesRedditSubreddits(ctx, reqEditors...)
@@ -1596,6 +1735,13 @@ func ParsePutApiDetectionsTagsResponse(rsp *http.Response) (*PutApiDetectionsTag
 	}
 
 	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest DetectionTags
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest DetectionTags
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -1768,6 +1914,32 @@ func ParsePutApiProfilesIdResponse(rsp *http.Response) (*PutApiProfilesIdRespons
 	return response, nil
 }
 
+// ParsePostApiProfilesIdJumpstartResponse parses an HTTP response from a PostApiProfilesIdJumpstartWithResponse call
+func ParsePostApiProfilesIdJumpstartResponse(rsp *http.Response) (*PostApiProfilesIdJumpstartResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &PostApiProfilesIdJumpstartResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseGetApiSourcesRedditSubredditsResponse parses an HTTP response from a GetApiSourcesRedditSubredditsWithResponse call
 func ParseGetApiSourcesRedditSubredditsResponse(rsp *http.Response) (*GetApiSourcesRedditSubredditsResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -1912,6 +2084,9 @@ type ServerInterface interface {
 	// Update a profile by ID
 	// (PUT /api/profiles/{id})
 	PutApiProfilesId(c *gin.Context, id int)
+	// Jumpstart a profile - run analysis on old posts
+	// (POST /api/profiles/{id}/jumpstart)
+	PostApiProfilesIdJumpstart(c *gin.Context, id int)
 	// Get all subreddits
 	// (GET /api/sources/reddit/subreddits)
 	GetApiSourcesRedditSubreddits(c *gin.Context)
@@ -2088,6 +2263,32 @@ func (siw *ServerInterfaceWrapper) PutApiProfilesId(c *gin.Context) {
 	siw.Handler.PutApiProfilesId(c, id)
 }
 
+// PostApiProfilesIdJumpstart operation middleware
+func (siw *ServerInterfaceWrapper) PostApiProfilesIdJumpstart(c *gin.Context) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id int
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	c.Set(BasicAuthScopes, []string{})
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.PostApiProfilesIdJumpstart(c, id)
+}
+
 // GetApiSourcesRedditSubreddits operation middleware
 func (siw *ServerInterfaceWrapper) GetApiSourcesRedditSubreddits(c *gin.Context) {
 
@@ -2225,6 +2426,7 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.DELETE(options.BaseURL+"/api/profiles/:id", wrapper.DeleteApiProfilesId)
 	router.GET(options.BaseURL+"/api/profiles/:id", wrapper.GetApiProfilesId)
 	router.PUT(options.BaseURL+"/api/profiles/:id", wrapper.PutApiProfilesId)
+	router.POST(options.BaseURL+"/api/profiles/:id/jumpstart", wrapper.PostApiProfilesIdJumpstart)
 	router.GET(options.BaseURL+"/api/sources/reddit/subreddits", wrapper.GetApiSourcesRedditSubreddits)
 	router.POST(options.BaseURL+"/api/sources/reddit/subreddits/:subreddit/add_profiles", wrapper.PostApiSourcesRedditSubredditsSubredditAddProfiles)
 	router.POST(options.BaseURL+"/api/sources/reddit/subreddits/:subreddit/remove_profiles", wrapper.PostApiSourcesRedditSubredditsSubredditRemoveProfiles)
@@ -2300,7 +2502,13 @@ type PutApiDetectionsTagsResponseObject interface {
 }
 
 type PutApiDetectionsTags200JSONResponse DetectionTags
+type PutApiDetectionsTags200JSONResponse DetectionTags
 
+func (response PutApiDetectionsTags200JSONResponse) VisitPutApiDetectionsTagsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
 func (response PutApiDetectionsTags200JSONResponse) VisitPutApiDetectionsTagsResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
@@ -2487,6 +2695,40 @@ func (response PutApiProfilesId500JSONResponse) VisitPutApiProfilesIdResponse(w 
 	return json.NewEncoder(w).Encode(response)
 }
 
+type PostApiProfilesIdJumpstartRequestObject struct {
+	Id   int `json:"id"`
+	Body *PostApiProfilesIdJumpstartJSONRequestBody
+}
+
+type PostApiProfilesIdJumpstartResponseObject interface {
+	VisitPostApiProfilesIdJumpstartResponse(w http.ResponseWriter) error
+}
+
+type PostApiProfilesIdJumpstart204Response struct {
+}
+
+func (response PostApiProfilesIdJumpstart204Response) VisitPostApiProfilesIdJumpstartResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type PostApiProfilesIdJumpstart404Response struct {
+}
+
+func (response PostApiProfilesIdJumpstart404Response) VisitPostApiProfilesIdJumpstartResponse(w http.ResponseWriter) error {
+	w.WriteHeader(404)
+	return nil
+}
+
+type PostApiProfilesIdJumpstart500JSONResponse Error
+
+func (response PostApiProfilesIdJumpstart500JSONResponse) VisitPostApiProfilesIdJumpstartResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type GetApiSourcesRedditSubredditsRequestObject struct {
 }
 
@@ -2664,6 +2906,9 @@ type StrictServerInterface interface {
 	// Update a profile by ID
 	// (PUT /api/profiles/{id})
 	PutApiProfilesId(ctx context.Context, request PutApiProfilesIdRequestObject) (PutApiProfilesIdResponseObject, error)
+	// Jumpstart a profile - run analysis on old posts
+	// (POST /api/profiles/{id}/jumpstart)
+	PostApiProfilesIdJumpstart(ctx context.Context, request PostApiProfilesIdJumpstartRequestObject) (PostApiProfilesIdJumpstartResponseObject, error)
 	// Get all subreddits
 	// (GET /api/sources/reddit/subreddits)
 	GetApiSourcesRedditSubreddits(ctx context.Context, request GetApiSourcesRedditSubredditsRequestObject) (GetApiSourcesRedditSubredditsResponseObject, error)
@@ -2929,6 +3174,41 @@ func (sh *strictHandler) PutApiProfilesId(ctx *gin.Context, id int) {
 		ctx.Status(http.StatusInternalServerError)
 	} else if validResponse, ok := response.(PutApiProfilesIdResponseObject); ok {
 		if err := validResponse.VisitPutApiProfilesIdResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PostApiProfilesIdJumpstart operation middleware
+func (sh *strictHandler) PostApiProfilesIdJumpstart(ctx *gin.Context, id int) {
+	var request PostApiProfilesIdJumpstartRequestObject
+
+	request.Id = id
+
+	var body PostApiProfilesIdJumpstartJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		ctx.Status(http.StatusBadRequest)
+		ctx.Error(err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.PostApiProfilesIdJumpstart(ctx, request.(PostApiProfilesIdJumpstartRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PostApiProfilesIdJumpstart")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(PostApiProfilesIdJumpstartResponseObject); ok {
+		if err := validResponse.VisitPostApiProfilesIdJumpstartResponse(ctx.Writer); err != nil {
 			ctx.Error(err)
 		}
 	} else if response != nil {

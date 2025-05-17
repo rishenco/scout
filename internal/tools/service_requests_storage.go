@@ -2,16 +2,18 @@ package tools
 
 import (
 	"context"
-
-	"github.com/rishenco/scout/internal/pg"
 )
 
+type requestsStorage interface {
+	Save(ctx context.Context, service string, requestType string, request interface{}, response interface{}) error
+}
+
 type ServiceRequestsStorage struct {
-	requestsStorage *pg.RequestsStorage
+	requestsStorage requestsStorage
 	service         string
 }
 
-func WrapRequestsStorage(requestsStorage *pg.RequestsStorage, service string) *ServiceRequestsStorage {
+func WrapRequestsStorage(requestsStorage requestsStorage, service string) *ServiceRequestsStorage {
 	return &ServiceRequestsStorage{
 		requestsStorage: requestsStorage,
 		service:         service,

@@ -7,6 +7,7 @@ import (
 
 	"github.com/rishenco/scout/pkg/models"
 	"github.com/rs/zerolog"
+	"github.com/samber/lo"
 )
 
 type toolkitStorage interface {
@@ -16,6 +17,15 @@ type toolkitStorage interface {
 	GetAllSubredditSettingsWithProfileID(ctx context.Context, profileID int64) ([]SubredditSettings, error)
 	AddProfilesToSubreddit(ctx context.Context, subreddit string, profileIDs []int64) error
 	RemoveProfilesFromSubreddit(ctx context.Context, subreddit string, profileIDs []int64) error
+	RemoveProfileFromAllSubredditSettings(ctx context.Context, profileID int64) error
+	// GetPostIDsWithSubreddits returns a list of ids of posts from subreddits.
+	//
+	// subreddits - subreddits to get post IDs for
+	//
+	// days - how many days to go back in time to analyze. If nil, analyze all posts.
+	//
+	// limit - how many posts to analyze. If nil, analyze all posts.
+	GetScheduledPostIDsFromSubreddits(ctx context.Context, subreddits []string, days *int, limit *int) ([]string, error)
 }
 
 type analyzer interface {
@@ -94,4 +104,44 @@ func (t *Toolkit) AddProfilesToSubreddit(ctx context.Context, subreddit string, 
 
 func (t *Toolkit) RemoveProfilesFromSubreddit(ctx context.Context, subreddit string, profileIDs []int64) error {
 	return t.storage.RemoveProfilesFromSubreddit(ctx, subreddit, profileIDs)
+}
+
+func (t *Toolkit) GetScheduledSourceIDs(ctx context.Context, profileIDs []int64, days *int, limit *int) ([]string, error) {
+	allSubredditSettings, err := t.storage.GetAllSubredditSettingsWithProfileID(ctx, profileIDs[0])
+	if err != nil {
+		return nil, fmt.Errorf("get subreddit settings: %w", err)
+	}
+
+	profileToSubreddits := make(map[int64]map[string]struct{})
+
+	for _, subredditSettings := range allSubredditSettings {
+		for _, profileID := range subredditSettings.Profiles {
+			if _, ok := profileToSubreddits[profileID]; !ok {
+				profileToSubreddits[profileID] = make(map[string]struct{})
+			}
+
+			profileToSubreddits[profileID][subredditSettings.Subreddit] = struct{}{}
+		}
+	}
+
+	sourceIDs := make(map[string]struct{})
+
+	for _, profileID := range profileIDs {
+		subreddits := lo.Keys(profileToSubreddits[profileID])
+
+		postIDs, err := t.storage.GetScheduledPostIDsFromSubreddits(ctx, subreddits, days, limit)
+		if err != nil {
+			return nil, fmt.Errorf("get post IDs from subreddits: %w", err)
+		}
+
+		for _, postID := range postIDs {
+			sourceIDs[postID] = struct{}{}
+		}
+	}
+
+	return lo.Keys(sourceIDs), nil
+}
+
+func (t *Toolkit) DeleteProfile(ctx context.Context, profileID int64) error {
+	return t.storage.RemoveProfileFromAllSubredditSettings(ctx, profileID)
 }

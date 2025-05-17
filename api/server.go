@@ -17,7 +17,7 @@ import (
 
 type scout interface {
 	Analyze(ctx context.Context, source string, sourceID string, profileSettings models.ProfileSettings, shouldSave bool) (models.Detection, error)
-	DeleteProfileByID(ctx context.Context, id int64) error
+	DeleteProfile(ctx context.Context, id int64) error
 	GetAllProfiles(ctx context.Context) ([]models.Profile, error)
 	GetProfile(ctx context.Context, id int64) (profile models.Profile, found bool, err error)
 	CreateProfile(ctx context.Context, profile models.Profile) (id int64, err error)
@@ -26,6 +26,7 @@ type scout interface {
 	GetDetectionTags(ctx context.Context, detectionIDs []int64) ([]models.DetectionTags, error)
 	GetSourcePosts(ctx context.Context, source string, sourceIDs []string) ([]models.SourcePost, error)
 	ListDetections(ctx context.Context, query models.DetectionQuery) ([]models.DetectionRecord, error)
+	JumpstartProfile(ctx context.Context, profileID int64, jumpstartPeriod *int, limit *int) error
 }
 
 type redditToolkit interface {
@@ -66,7 +67,7 @@ func NewGinEngine(server *Server, middlewares ...gin.HandlerFunc) *gin.Engine {
 
 // DeleteApiProfilesId implements oapi.StrictServerInterface.
 func (s *Server) DeleteApiProfilesId(ctx context.Context, request oapi.DeleteApiProfilesIdRequestObject) (oapi.DeleteApiProfilesIdResponseObject, error) {
-	if err := s.scout.DeleteProfileByID(ctx, int64(request.Id)); err != nil {
+	if err := s.scout.DeleteProfile(ctx, int64(request.Id)); err != nil {
 		return oapi.DeleteApiProfilesId500JSONResponse{Error: err.Error()}, nil
 	}
 
@@ -298,6 +299,26 @@ func (s *Server) PostApiSourcesRedditSubredditsSubredditRemoveProfiles(ctx conte
 	}
 
 	return oapi.PostApiSourcesRedditSubredditsSubredditRemoveProfiles204Response{}, nil
+}
+
+// PostApiProfilesIdJumpstart implements oapi.StrictServerInterface.
+func (s *Server) PostApiProfilesIdJumpstart(ctx context.Context, request oapi.PostApiProfilesIdJumpstartRequestObject) (oapi.PostApiProfilesIdJumpstartResponseObject, error) {
+	var jumpstartDays *int
+	var jumpstartLimit *int
+
+	if request.Body.JumpstartPeriod != nil {
+		jumpstartDays = lo.ToPtr(int(*request.Body.JumpstartPeriod))
+	}
+
+	if request.Body.Limit != nil {
+		jumpstartLimit = lo.ToPtr(int(*request.Body.Limit))
+	}
+
+	if err := s.scout.JumpstartProfile(ctx, int64(request.Id), jumpstartDays, jumpstartLimit); err != nil {
+		return oapi.PostApiProfilesIdJumpstart500JSONResponse{Error: err.Error()}, nil
+	}
+
+	return oapi.PostApiProfilesIdJumpstart204Response{}, nil
 }
 
 func profileFromModel(profile models.Profile) oapi.Profile {

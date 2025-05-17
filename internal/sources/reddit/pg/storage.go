@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"time"
 
+	sq "github.com/Masterminds/squirrel"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rishenco/scout/internal/sources/reddit"
+	"github.com/rishenco/scout/internal/tools"
 	"github.com/rs/zerolog"
 )
 
@@ -437,4 +439,70 @@ func (s *Storage) RemoveProfilesFromSubreddit(ctx context.Context, subreddit str
 	}
 
 	return nil
+}
+
+func (s *Storage) RemoveProfileFromAllSubredditSettings(ctx context.Context, profileID int64) error {
+	query := `
+		UPDATE reddit.subreddit_settings
+		SET profiles = COALESCE((
+			SELECT array_agg(p)
+			FROM unnest(profiles) AS p
+			WHERE p != $1
+		), '{}')
+	`
+
+	_, err := s.pool.Exec(ctx, query, profileID)
+	if err != nil {
+		return fmt.Errorf("exec: %w", err)
+	}
+
+	return nil
+}
+
+func (s *Storage) GetScheduledPostIDsFromSubreddits(ctx context.Context, subreddits []string, days *int, limit *int) ([]string, error) {
+	psq := tools.Psq().
+		Select("post_id").
+		From("reddit.posts").
+		Where(sq.Eq{"lower((post_json->>'subreddit')::text)": subreddits}).
+		OrderBy("post_created_at")
+
+	if days != nil {
+		cutoffDate := time.Now().AddDate(0, 0, -*days)
+
+		psq = psq.Where(sq.Gt{"post_created_at": cutoffDate})
+	}
+
+	if limit != nil {
+		psq = psq.Limit(uint64(*limit))
+	}
+
+	query, args, err := psq.ToSql()
+	if err != nil {
+		return nil, fmt.Errorf("to sql: %w", err)
+	}
+
+	rows, err := s.pool.Query(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("query: %w", err)
+	}
+
+	defer rows.Close()
+
+	postIDs := make([]string, 0)
+
+	for rows.Next() {
+		var postID string
+
+		if err := rows.Scan(&postID); err != nil {
+			return nil, fmt.Errorf("scan: %w", err)
+		}
+
+		postIDs = append(postIDs, postID)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows error: %w", err)
+	}
+
+	return postIDs, nil
 }
