@@ -22,7 +22,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { useState } from "react"
-import type { PlaygroundPost } from "./models"
+import {isPostCorrect, type PlaygroundPost} from "./models"
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
@@ -64,10 +64,11 @@ export function DataTable<TData, TValue>({
   })
 
   const rowHighlightClass = (post: PlaygroundPost) => {
-    if (post.newDetection === undefined) {
+    const correct = isPostCorrect(post);
+    if (correct === undefined) {
       return "bg-muted";
     }
-    if (post.originalPost.tags?.relevancy_detected_correctly === post.newDetection.is_relevant) {
+    if (correct) {
       return "bg-green-50 dark:bg-green-950/50";
     }
     return "bg-orange-50 dark:bg-orange-950/50";

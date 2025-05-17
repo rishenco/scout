@@ -22,8 +22,8 @@ export interface Profile {
 }
 
 export interface ProfileSettingsUpdate {
-    relevancy_filter?: string;
-    extracted_properties?: Record<string, string | null>;
+    relevancy_filter: string;
+    extracted_properties: Record<string, string>;
 }
 
 export interface ProfileUpdate {
