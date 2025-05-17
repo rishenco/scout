@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import type { ListedDetection } from '@/api/models'
@@ -7,9 +6,10 @@ import { RedditDetectionCard } from './RedditDetectionCard'
 interface DetectionCardProps {
   listedDetection?: ListedDetection
   isLoading?: boolean
+  onCardClick?: () => void
 }
 
-export function DetectionCard({ listedDetection, isLoading = false }: DetectionCardProps) {
+export function DetectionCard({ listedDetection, isLoading = false, onCardClick }: DetectionCardProps) {
   if (isLoading || !listedDetection?.detection || !listedDetection?.source_post) {
     return (
       <Card className="w-full mb-4">
@@ -32,7 +32,7 @@ export function DetectionCard({ listedDetection, isLoading = false }: DetectionC
 
   switch (listedDetection.detection.source) {
     case 'reddit':
-      return <RedditDetectionCard listedDetection={listedDetection} />
+      return <RedditDetectionCard listedDetection={listedDetection} onCardClick={onCardClick} />
     default:
       return <div>Unknown source</div>
   }
