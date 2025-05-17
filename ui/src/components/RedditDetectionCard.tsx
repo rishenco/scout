@@ -1,24 +1,31 @@
-import { useState } from 'react'
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { ArrowUpIcon, MessageSquareIcon, ExternalLinkIcon } from 'lucide-react'
 import type { ListedDetection, RedditPostAndComments } from '@/api/models'
 import { ExtractedProperties } from '@/components/ExtractedProperties'
 import { RelevancyBadge } from '@/components/RelevancyBadge'
 import { DetectionReaction } from '@/components/DetectionReaction'
-import { RedditDetectionDialog } from '@/components/RedditDetectionDialog'
 
 interface RedditDetectionCardProps {
   listedDetection: ListedDetection
+  onCardClick?: () => void
+  truncateContent?: boolean
+  disableBorder?: boolean
 }
 
-export function RedditDetectionCard({ listedDetection }: RedditDetectionCardProps) {
-  const [dialogOpen, setDialogOpen] = useState(false)
-
+export function RedditDetectionCard({ 
+  listedDetection, 
+  onCardClick,
+  truncateContent = false,
+  disableBorder = false
+}: RedditDetectionCardProps) {
   const redditPost = listedDetection.source_post as RedditPostAndComments
 
   return (
     <>
-      <Card className="w-full mb-4 cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => setDialogOpen(true)}>
+      <Card 
+        className={`w-full ${onCardClick ? 'cursor-pointer hover:bg-muted/50 transition-colors' : ''} ${disableBorder ? 'border-none' : 'mb-4'}`} 
+        onClick={onCardClick}
+      >
         <CardHeader className="pt-3 pb-2 px-4 relative">
           <div className="flex justify-between items-start">
             <div>
@@ -45,7 +52,7 @@ export function RedditDetectionCard({ listedDetection }: RedditDetectionCardProp
             />
           )}
           
-          <div className="text-sm line-clamp-2 text-muted-foreground">
+          <div className={`text-sm ${truncateContent ? 'whitespace-pre-wrap' : 'line-clamp-2'} text-muted-foreground`}>
             {redditPost.post.selftext}
           </div>
         </CardContent>
@@ -72,14 +79,6 @@ export function RedditDetectionCard({ listedDetection }: RedditDetectionCardProp
           </div>
         </CardFooter>
       </Card>
-
-      {listedDetection && (
-        <RedditDetectionDialog 
-          listedDetection={listedDetection}
-          open={dialogOpen}
-          onOpenChange={setDialogOpen}
-        />
-      )}
     </>
   )
 } 

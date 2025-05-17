@@ -3,7 +3,8 @@ import { useInView } from 'react-intersection-observer'
 import { DetectionFilter as DetectionFilterComponent} from '@/components/DetectionFilter'
 import { DetectionCard } from '@/components/DetectionCard'
 import { useInfiniteDetections } from '@/api/hooks'
-import type { DetectionFilter } from '@/api/models'
+import type { DetectionFilter, ListedDetection } from '@/api/models'
+import { RedditDetectionDialog } from '@/components/RedditDetectionDialog'
 
 interface DetectionListProps {
   profileId: number
@@ -14,6 +15,9 @@ export function DetectionList({ profileId }: DetectionListProps) {
     is_relevant: true,
     profiles: [profileId],
   })
+  
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [selectedDetection, setSelectedDetection] = useState<ListedDetection | null>(null)
   
   // Setup infinite scroll with intersection observer
   const { ref, inView } = useInView({
@@ -42,6 +46,11 @@ export function DetectionList({ profileId }: DetectionListProps) {
   const handleFilterChange = (newFilter: DetectionFilter) => {
     setFilter(newFilter)
   }
+
+  const handleCardClick = (detection: ListedDetection) => {
+    setSelectedDetection(detection)
+    setIsDialogOpen(true)
+  }
   
   return (
     <div className="space-y-4">
@@ -56,6 +65,7 @@ export function DetectionList({ profileId }: DetectionListProps) {
           <DetectionCard 
             key={detection.detection.id} // Use detection ID as key
             listedDetection={detection}
+            onCardClick={() => handleCardClick(detection)}
           />
         ))}
         
@@ -82,6 +92,14 @@ export function DetectionList({ profileId }: DetectionListProps) {
           </div>
         )}
       </div>
+
+      {selectedDetection && (
+        <RedditDetectionDialog
+          listedDetection={selectedDetection}
+          open={isDialogOpen}
+          onOpenChange={setIsDialogOpen}
+        />
+      )}
     </div>
   )
 }
