@@ -28,6 +28,14 @@ type taskAdder interface {
 type SourceToolkit interface {
 	Analyze(ctx context.Context, postID string, profileSettings models.ProfileSettings) (models.Detection, error)
 	GetSourcePosts(ctx context.Context, ids []string) ([]models.SourcePost, error)
+	// GetSourceIDsForAnalysis returns a list of source IDs for analysis.
+	//
+	// profileIDs - profiles for which to get source IDs
+	//
+	// days - how many days to go back in time to analyze
+	//
+	// limit - how many posts to analyze. If -1, analyze all posts.
+	GetScheduledSourceIDs(ctx context.Context, profileIDs []int64, days int, limit int) ([]string, error)
 }
 
 type Scout struct {
@@ -133,4 +141,30 @@ func (s *Scout) GetSourcePosts(ctx context.Context, source string, sourceIDs []s
 
 func (s *Scout) ListDetections(ctx context.Context, query models.DetectionQuery) ([]models.DetectionRecord, error) {
 	return s.storage.ListDetections(ctx, query)
+}
+
+func (s *Scout) JumpstartProfile(ctx context.Context, profileID int64, jumpstartPeriod int, limit int) error {
+	var analysisTasks []models.AnalysisTask
+
+	for source, toolkit := range s.toolkits {
+		sourceIDs, err := toolkit.GetScheduledSourceIDs(ctx, []int64{profileID}, jumpstartPeriod, limit)
+		if err != nil {
+			return fmt.Errorf("get source IDs for analysis (source=%s): %w", source, err)
+		}
+
+		for _, sourceID := range sourceIDs {
+			analysisTasks = append(analysisTasks, models.AnalysisTask{
+				Source:     source,
+				SourceID:   sourceID,
+				ProfileID:  profileID,
+				ShouldSave: true,
+			})
+		}
+	}
+
+	if err := s.taskAdder.Add(ctx, analysisTasks); err != nil {
+		return fmt.Errorf("add analysis tasks: %w", err)
+	}
+
+	return nil
 }

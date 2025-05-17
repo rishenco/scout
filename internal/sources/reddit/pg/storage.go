@@ -434,3 +434,38 @@ func (s *Storage) RemoveProfilesFromSubreddit(ctx context.Context, subreddit str
 
 	return nil
 }
+
+func (s *Storage) GetScheduledPostIDsFromSubreddits(ctx context.Context, subreddits []string, days int, limit int) ([]string, error) {
+	query := `
+		SELECT post_id
+		FROM reddit.posts
+		WHERE lower((post_json->>'subreddit')::text) = ANY($1) AND post_created_at > $2
+		ORDER BY post_created_at
+		LIMIT $3
+	`
+
+	rows, err := s.pool.Query(ctx, query, subreddits, days, limit)
+	if err != nil {
+		return nil, fmt.Errorf("query: %w", err)
+	}
+
+	defer rows.Close()
+
+	postIDs := make([]string, 0)
+
+	for rows.Next() {
+		var postID string
+
+		if err := rows.Scan(&postID); err != nil {
+			return nil, fmt.Errorf("scan: %w", err)
+		}
+
+		postIDs = append(postIDs, postID)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows error: %w", err)
+	}
+
+	return postIDs, nil
+}
