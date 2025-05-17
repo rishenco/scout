@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog"
@@ -201,9 +202,10 @@ func main() {
 		ginEngine := api.NewGinEngine(
 			server,
 			gin.Recovery(),
+			cors.Default(),
 		)
 
-		ginEngine.Group("/api").Use(gin.BasicAuth(gin.Accounts(credentialsConfig.APIAccounts)))
+		// ginEngine.Group("/api").Use(gin.BasicAuth(gin.Accounts(credentialsConfig.APIAccounts)))
 
 		ginEngine.StaticFile("swagger.yaml", "./api/swagger.yaml")
 

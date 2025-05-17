@@ -4,7 +4,7 @@ google:
 
 task_processor:
   batch_size: 100
-  workers: 5
+  workers: 15
   timeout: 1s
   error_timeout: 3s
   no_tasks_timeout: 5s
