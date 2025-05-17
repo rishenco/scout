@@ -10,7 +10,7 @@ drop-db:
 	set -a && \
 	. ./.env && \
 	GOOSE_DRIVER=postgres \
-	GOOSE_DBSTRING=$(GOOSE_POSTGRES_CONN_STRING) \
+	GOOSE_DBSTRING=$$GOOSE_POSTGRES_CONN_STRING \
 	goose -dir ./migrations reset
 
 .PHONY: init-db
@@ -18,7 +18,7 @@ init-db:
 	set -a && \
 	. ./.env && \
 	GOOSE_DRIVER=postgres \
-	GOOSE_DBSTRING=$(GOOSE_POSTGRES_CONN_STRING) \
+	GOOSE_DBSTRING=$$GOOSE_POSTGRES_CONN_STRING \
 	goose -dir ./migrations up
 
 .PHONY: reinit-db

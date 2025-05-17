@@ -16,11 +16,11 @@ CREATE TABLE IF NOT EXISTS scout.profiles (
 CREATE TABLE IF NOT EXISTS scout.profile_settings (
     profile_id BIGINT NOT NULL,
     source VARCHAR(255) NULL,
-    relevancy_filter VARCHAR(8192),
-    extracted_properties JSONB,
+    relevancy_filter VARCHAR(8192) NOT NULL,
+    extracted_properties JSONB NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    UNIQUE (profile_id, source)
+    UNIQUE NULLS NOT DISTINCT (profile_id, source)
 );
 
 -- Create detections table
@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS scout.detections (
 -- Create detection tags table
 CREATE TABLE IF NOT EXISTS scout.detection_tags (
     detection_id BIGINT NOT NULL,
-    relevancy_detected_correctly BOOLEAN,
+    relevancy_detected_correctly BOOLEAN NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     PRIMARY KEY (detection_id)
 );

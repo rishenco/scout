@@ -205,7 +205,7 @@ func main() {
 			cors.Default(),
 		)
 
-		ginEngine.Group("/api").Use(gin.BasicAuth(gin.Accounts(credentialsConfig.APIAccounts)))
+		// ginEngine.Group("/api").Use(gin.BasicAuth(gin.Accounts(credentialsConfig.APIAccounts)))
 
 		ginEngine.StaticFile("swagger.yaml", "./api/swagger.yaml")
 

@@ -110,6 +110,9 @@ func (p *TaskProcessor) processTask(ctx context.Context) (anyTask bool, err erro
 	}
 
 	if !anyTask {
+		p.logger.Info().
+			Msg("no tasks to process")
+
 		return false, nil
 	}
 
