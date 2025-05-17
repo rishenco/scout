@@ -23,6 +23,7 @@ go.work.sum
 
 # env file
 .env
+.env.docker
 
 __debug_bin*
 .DS_Store
