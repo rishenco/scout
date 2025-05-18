@@ -532,14 +532,14 @@ func (s *ScoutStorage) ListDetections(ctx context.Context, query models.Detectio
 	return result, nil
 }
 
-func (s *ScoutStorage) GetPresentDetections(ctx context.Context, source string, sourceIDs []string) ([]string, error) {
+func (s *ScoutStorage) GetPresentDetectionsForProfile(ctx context.Context, profileID int64, source string, sourceIDs []string) ([]string, error) {
 	query := `
 		SELECT DISTINCT source_id
 		FROM scout.detections
-		WHERE source = $1 AND source_id = ANY($2)
+		WHERE profile_id = $1 AND source = $2 AND source_id = ANY($3)
 	`
 
-	rows, err := s.pool.Query(ctx, query, source, sourceIDs)
+	rows, err := s.pool.Query(ctx, query, profileID, source, sourceIDs)
 	if err != nil {
 		return nil, fmt.Errorf("query: %w", err)
 	}

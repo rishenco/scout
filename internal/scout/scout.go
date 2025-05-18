@@ -18,7 +18,7 @@ type storage interface {
 	SaveDetection(ctx context.Context, record models.DetectionRecord) error
 	ListDetections(ctx context.Context, query models.DetectionQuery) ([]models.DetectionRecord, error)
 	GetDetectionTags(ctx context.Context, detectionIDs []int64) ([]models.DetectionTags, error)
-	GetPresentDetections(ctx context.Context, source string, sourceIDs []string) ([]string, error)
+	GetPresentDetectionsForProfile(ctx context.Context, profileID int64, source string, sourceIDs []string) ([]string, error)
 	UpdateTags(ctx context.Context, detectionID int64, update models.DetectionTagsUpdate) (models.DetectionTags, error)
 }
 
@@ -170,7 +170,7 @@ func (s *Scout) JumpstartProfile(ctx context.Context, profileID int64, jumpstart
 	var analysisTasks []models.AnalysisTask
 
 	for source, sourceIDs := range sourceToIDs {
-		presentSourceIDs, err := s.storage.GetPresentDetections(ctx, source, sourceIDs)
+		presentSourceIDs, err := s.storage.GetPresentDetectionsForProfile(ctx, profileID, source, sourceIDs)
 		if err != nil {
 			return fmt.Errorf("get present detections (source=%s): %w", source, err)
 		}
