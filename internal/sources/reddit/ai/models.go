@@ -1,7 +1,5 @@
 package ai
 
-import "github.com/rishenco/scout/internal/sources/reddit"
-
 type searchResult struct {
 	IsRelevant bool              `json:"is_relevant"`
 	Properties map[string]string `json:"properties"`
@@ -24,9 +22,4 @@ type redditInputObject struct {
 	Comments            []redditInputCommentObject `json:"comments"`
 	RelevancyFilter     string                     `json:"relevancy_filter"`
 	ExtractedProperties map[string]string          `json:"extracted_props"`
-}
-
-type redditPostPropsSchema struct {
-	Post     reddit.Post      `mapstructure:"post"`
-	Comments []reddit.Comment `mapstructure:"comments"`
 }

@@ -20,7 +20,13 @@ func NewRequestsStorage(pool *pgxpool.Pool, logger zerolog.Logger) *RequestsStor
 	}
 }
 
-func (s *RequestsStorage) Save(ctx context.Context, service string, requestType string, request interface{}, response interface{}) error {
+func (s *RequestsStorage) Save(
+	ctx context.Context,
+	service string,
+	requestType string,
+	request any,
+	response any,
+) error {
 	query := `
 		INSERT INTO audit.requests (service, request_type, request, response)
 		VALUES ($1, $2, $3, $4)

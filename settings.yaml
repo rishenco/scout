@@ -1,39 +1,50 @@
+# Scout uses Gemini API to analyze posts.
 google:
-  model: "gemini-2.0-flash"
-  temperature: 0.25
+  model: "gemini-2.0-flash" # Model name
+  temperature: 0.25 # Temperature for the model
 
+# Scout uses a task queue to analyze posts.
+# Task processor claims those tasks and passes them to Scout service.
 task_processor:
-  batch_size: 100
-  workers: 15
-  timeout: 1s
-  error_timeout: 3s
-  no_tasks_timeout: 5s
-  disabled: false
+  workers: 15 # Number of parallel workers processing tasks
+  timeout: 1s # Timeout before claiming a new task
+  error_timeout: 3s # Timeout before claiming a new task after an error
+  no_tasks_timeout: 5s # Timeout before claiming a new task if there were no tasks
+  disabled: false # Disable the task processor
 
 api:
-  port: 5601
-  disabled: false
+  port: 5601 # Port to listen on
+  disabled: false # Disable the API
 
 reddit:
+  ai:
+    max_comments_per_post: 10 # Maximum number of comments to analyze per post
+
+  # Scrapes posts from subreddits and saves them to the database.
+  # Each requests loads up to 100 posts from a subreddit.
+  # Reddit API allows to load only up to 1000 latest posts from a subreddit.
   scraper:
-    timeout: 1s
-    error_timeout: 3s
-    timeout_after_full_scan: 3s
-    at_least_one_exhausting_scan: true
-    disabled: false
+    timeout: 1s # Timeout before making the next reddit API call
+    error_timeout: 3s # Timeout before making the next reddit API call after an error
+    timeout_after_full_scan: 3s # Timeout after scanning all available posts from a subreddit
+    at_least_one_exhausting_scan: false
+    disabled: false # Disable the scraper
   
+  # For each scraped post, enricher loads extended post data (Post body, comments, etc.) from reddit API.
   enricher:
-    batch_size: 100
-    min_post_age: 48h
-    workers: 5
-    retries: 3
-    timeout: 1s
-    error_timeout: 3s
-    disabled: false
+    batch_size: 100 # How many posts enricher schedules for downloading per iteration
+    min_post_age: 48h # Minimum age of a post to be processed
+    workers: 5 # Number of parallel workers processing posts at each iteration
+    retries: 3 # Number of retries for a post if it fails to be downloaded
+    timeout: 1s # Timeout before moving to the next iteration
+    error_timeout: 3s # Timeout before moving to the next iteration after an error
+    disabled: false # Disable the enricher
   
+  # Scheduler is responsible for creating Scout Analysis Tasks for analysis.
+  # It loads enriched and not previously scheduled posts from the database and creates new tasks for them.
   scheduler:
-    batch_size: 100
-    min_score: 10
-    timeout: 1s
-    error_timeout: 3s
-    disabled: false
+    batch_size: 100 # How many posts scheduler schedules for analysis per iteration
+    min_score: 10 # Minimum score of a post to be scheduled for analysis
+    timeout: 1s # Timeout before moving to the next iteration
+    error_timeout: 3s # Timeout before moving to the next iteration after an error
+    disabled: false # Disable the scheduler

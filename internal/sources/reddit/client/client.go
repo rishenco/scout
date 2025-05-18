@@ -4,10 +4,11 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/rishenco/scout/internal/sources/reddit"
 	"github.com/rs/zerolog"
 	"github.com/samber/lo"
 	redditlib "github.com/vartanbeno/go-reddit/v2/reddit"
+
+	"github.com/rishenco/scout/internal/sources/reddit"
 )
 
 type requestsLog interface {
@@ -18,7 +19,7 @@ const (
 	maxLimit = 100 // Default limit for Reddit API requests
 )
 
-// Client handles interactions with the Reddit API
+// Client handles interactions with the Reddit API.
 type Client struct {
 	client      *redditlib.Client
 	requestsLog requestsLog
@@ -35,18 +36,22 @@ type RedditAuth struct {
 }
 
 func New(auth RedditAuth, requestsLog requestsLog, logger zerolog.Logger) (*Client, error) {
-	credentials := redditlib.Credentials{
-		ID:       auth.ClientID,
-		Secret:   auth.ClientSecret,
-		Username: auth.Username,
-		Password: auth.Password,
-	}
+	var client *redditlib.Client
 
-	_ = credentials
+	if auth.Username != "" && auth.Password != "" {
+		authorizedClient, err := newAuthorizedRedditClient(auth)
+		if err != nil {
+			return nil, fmt.Errorf("create authorized reddit client: %w", err)
+		}
 
-	client, err := redditlib.NewClient(credentials, redditlib.WithUserAgent(auth.UserAgent))
-	if err != nil {
-		return nil, fmt.Errorf("create reddit client: %w", err)
+		client = authorizedClient
+	} else {
+		readOnlyClient, err := newReadOnlyRedditClient(auth)
+		if err != nil {
+			return nil, fmt.Errorf("create read-only reddit client: %w", err)
+		}
+
+		client = readOnlyClient
 	}
 
 	return &Client{
@@ -56,7 +61,12 @@ func New(auth RedditAuth, requestsLog requestsLog, logger zerolog.Logger) (*Clie
 	}, nil
 }
 
-func (c *Client) GetPosts(ctx context.Context, subreddit string, after string, limit int) (posts []reddit.Post, nextAfter string, err error) {
+func (c *Client) GetPosts(
+	ctx context.Context,
+	subreddit string,
+	after string,
+	limit int,
+) (posts []reddit.Post, nextAfter string, err error) {
 	c.logger.Debug().
 		Str("subreddit", subreddit).
 		Str("after", after).
@@ -71,17 +81,17 @@ func (c *Client) GetPosts(ctx context.Context, subreddit string, after string, l
 	}
 
 	// Get posts from the subreddit
-	posts_, resp, err := c.client.Subreddit.NewPosts(ctx, subreddit, opts)
+	libPosts, resp, err := c.client.Subreddit.NewPosts(ctx, subreddit, opts)
 	if err != nil {
 		return nil, "", fmt.Errorf("get new posts: %w", err)
 	}
 
 	c.logger.Info().
 		Str("subreddit", subreddit).
-		Int("posts_count", len(posts_)).
+		Int("posts_count", len(libPosts)).
 		Msg("retrieved posts")
 
-	posts = lo.Map(posts_, func(post *redditlib.Post, _ int) reddit.Post {
+	posts = lo.Map(libPosts, func(post *redditlib.Post, _ int) reddit.Post {
 		return reddit.PostFromLib(post)
 	})
 
@@ -103,7 +113,7 @@ func (c *Client) GetPosts(ctx context.Context, subreddit string, after string, l
 }
 
 func (c *Client) GetPost(ctx context.Context, id string) (post reddit.PostAndComments, err error) {
-	post_, _, err := c.client.Post.Get(ctx, id)
+	libPost, _, err := c.client.Post.Get(ctx, id)
 	if err != nil {
 		return reddit.PostAndComments{}, fmt.Errorf("get post: %w", err)
 	}
@@ -114,11 +124,48 @@ func (c *Client) GetPost(ctx context.Context, id string) (post reddit.PostAndCom
 		map[string]any{
 			"post_id": id,
 		},
-		post_,
+		libPost,
 	)
 	if err != nil {
 		c.logger.Error().Err(err).Msg("failed to save request log")
 	}
 
-	return reddit.PostAndCommentsFromLib(post_), nil
+	return reddit.PostAndCommentsFromLib(libPost), nil
+}
+
+func newAuthorizedRedditClient(auth RedditAuth) (*redditlib.Client, error) {
+	credentials := redditlib.Credentials{
+		ID:       auth.ClientID,
+		Secret:   auth.ClientSecret,
+		Username: auth.Username,
+		Password: auth.Password,
+	}
+
+	var options []redditlib.Opt
+
+	if auth.UserAgent != "" {
+		options = append(options, redditlib.WithUserAgent(auth.UserAgent))
+	}
+
+	authorizedClient, err := redditlib.NewClient(credentials, options...)
+	if err != nil {
+		return nil, fmt.Errorf("create authorized reddit client: %w", err)
+	}
+
+	return authorizedClient, nil
+}
+
+func newReadOnlyRedditClient(auth RedditAuth) (*redditlib.Client, error) {
+	var options []redditlib.Opt
+
+	if auth.UserAgent != "" {
+		options = append(options, redditlib.WithUserAgent(auth.UserAgent))
+	}
+
+	readOnlyClient, err := redditlib.NewReadonlyClient(options...)
+	if err != nil {
+		return nil, fmt.Errorf("create read-only reddit client: %w", err)
+	}
+
+	return readOnlyClient, nil
 }

@@ -11,13 +11,15 @@ type CredentialsConfig struct {
 
 	PostgresConnString string `envconfig:"POSTGRES_CONN_STRING" required:"true"`
 
-	RedditClientID     string `envconfig:"REDDIT_CLIENT_ID" required:"true"`
-	RedditClientSecret string `envconfig:"REDDIT_CLIENT_SECRET" required:"true"`
-	RedditUsername     string `envconfig:"REDDIT_USERNAME" required:"true"`
-	RedditPassword     string `envconfig:"REDDIT_PASSWORD" required:"true"`
-	RedditUserAgent    string `envconfig:"REDDIT_USER_AGENT" default:"scout:v1.0"`
+	Reddit RedditCredentialsConfig `envconfig:"REDDIT_CREDENTIALS"`
+}
 
-	APIAccounts map[string]string `envconfig:"API_ACCOUNTS" required:"true"`
+type RedditCredentialsConfig struct {
+	ClientID     string `envconfig:"REDDIT_CLIENT_ID"`
+	ClientSecret string `envconfig:"REDDIT_CLIENT_SECRET"`
+	Username     string `envconfig:"REDDIT_USERNAME"`
+	Password     string `envconfig:"REDDIT_PASSWORD"`
+	UserAgent    string `envconfig:"REDDIT_USER_AGENT"`
 }
 
 func ParseCredentialsConfig() (CredentialsConfig, error) {

@@ -6,8 +6,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/rishenco/scout/pkg/models"
 	"github.com/rs/zerolog"
+
+	"github.com/rishenco/scout/pkg/models"
 )
 
 type taskQueue interface {
@@ -17,13 +18,18 @@ type taskQueue interface {
 
 type scout interface {
 	GetProfile(ctx context.Context, profileID int64) (profile models.Profile, found bool, err error)
-	Analyze(ctx context.Context, source string, sourceID string, profileSettings models.ProfileSettings, shouldSave bool) (detection models.Detection, err error)
+	Analyze(
+		ctx context.Context,
+		source string,
+		sourceID string,
+		profileSettings models.ProfileSettings,
+		shouldSave bool,
+	) (detection models.Detection, err error)
 }
 
 type TaskProcessor struct {
 	taskQueue      taskQueue
 	scout          scout
-	batchSize      int
 	timeout        time.Duration
 	errorTimeout   time.Duration
 	noTasksTimeout time.Duration
@@ -34,7 +40,6 @@ type TaskProcessor struct {
 func NewTaskProcessor(
 	taskQueue taskQueue,
 	scout scout,
-	batchSize int,
 	timeout time.Duration,
 	errorTimeout time.Duration,
 	noTasksTimeout time.Duration,
@@ -44,7 +49,6 @@ func NewTaskProcessor(
 	return &TaskProcessor{
 		taskQueue:      taskQueue,
 		scout:          scout,
-		batchSize:      batchSize,
 		timeout:        timeout,
 		errorTimeout:   errorTimeout,
 		noTasksTimeout: noTasksTimeout,
@@ -143,7 +147,13 @@ func (p *TaskProcessor) processTask(ctx context.Context) (anyTask bool, err erro
 	profileSettings, found := profile.SourcesSettings[task.Source]
 	if !found {
 		if profile.DefaultSettings == nil {
-			return false, fmt.Errorf("profile settings not found: source = %s, profile id = %d", task.Source, task.ProfileID)
+			err := fmt.Errorf(
+				"profile settings not found: source = %s, profile id = %d",
+				task.Source,
+				task.ProfileID,
+			)
+
+			return false, err
 		}
 
 		profileSettings = *profile.DefaultSettings

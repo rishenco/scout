@@ -8,9 +8,10 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/rishenco/scout/pkg/models"
 	"github.com/rs/zerolog"
 	"github.com/samber/lo"
+
+	"github.com/rishenco/scout/pkg/models"
 )
 
 type TaskStorage struct {
@@ -121,7 +122,13 @@ func (s *TaskStorage) UnclaimOldTasks(ctx context.Context, timeout time.Duration
 	return nil
 }
 
-func UnclaimTasks(ctx context.Context, taskStorage *TaskStorage, interval time.Duration, claimTimeout time.Duration, logger zerolog.Logger) {
+func UnclaimTasks(
+	ctx context.Context,
+	taskStorage *TaskStorage,
+	interval time.Duration,
+	claimTimeout time.Duration,
+	logger zerolog.Logger,
+) {
 	for {
 		select {
 		case <-ctx.Done():

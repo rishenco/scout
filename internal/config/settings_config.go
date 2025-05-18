@@ -10,7 +10,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Config holds application configuration
+// SettingsConfig holds application configuration.
 type SettingsConfig struct {
 	Google struct {
 		Model       string  `json:"model" yaml:"model"`
@@ -18,7 +18,6 @@ type SettingsConfig struct {
 	} `json:"google" yaml:"google"`
 
 	TaskProcessor struct {
-		BatchSize      int           `json:"batch_size" yaml:"batch_size"`
 		Workers        int           `json:"workers" yaml:"workers"`
 		Timeout        time.Duration `json:"timeout" yaml:"timeout"`
 		ErrorTimeout   time.Duration `json:"error_timeout" yaml:"error_timeout"`
@@ -32,6 +31,10 @@ type SettingsConfig struct {
 	} `json:"api" yaml:"api"`
 
 	Reddit struct {
+		AI struct {
+			MaxCommentsPerPost int `json:"max_comments_per_post" yaml:"max_comments_per_post"`
+		} `json:"ai" yaml:"ai"`
+
 		Scraper struct {
 			Timeout                  time.Duration `json:"timeout" yaml:"timeout"`
 			ErrorTimeout             time.Duration `json:"error_timeout" yaml:"error_timeout"`

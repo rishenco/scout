@@ -50,7 +50,10 @@ func (s *ScoutStorage) SaveDetection(ctx context.Context, record models.Detectio
 	return nil
 }
 
-func (s *ScoutStorage) GetProfile(ctx context.Context, profileID int64) (profile models.Profile, found bool, err error) {
+func (s *ScoutStorage) GetProfile(
+	ctx context.Context,
+	profileID int64,
+) (profile models.Profile, found bool, err error) {
 	getProfileQuery := `
 		SELECT p.id, p.name, p.created_at, p.updated_at
 		FROM scout.profiles p
@@ -181,12 +184,17 @@ func (s *ScoutStorage) GetAllProfiles(ctx context.Context) ([]models.Profile, er
 }
 
 func (s *ScoutStorage) DeleteProfileByID(ctx context.Context, id int64) error {
-	// query := `
-	// 	DELETE FROM scout.profiles p
-	// 	WHERE p.id = $1
-	// `
+	query := `
+		DELETE FROM scout.profiles p
+		WHERE p.id = $1
+	`
 
-	return errors.New("not supported")
+	_, err := s.pool.Exec(ctx, query, id)
+	if err != nil {
+		return fmt.Errorf("exec: %w", err)
+	}
+
+	return nil
 }
 
 func (s *ScoutStorage) CreateProfile(ctx context.Context, profile models.Profile) (profileID int64, err error) {
@@ -206,7 +214,15 @@ func (s *ScoutStorage) CreateProfile(ctx context.Context, profile models.Profile
 		return 0, fmt.Errorf("begin tx: %w", err)
 	}
 
-	defer tx.Rollback(ctx)
+	defer func() {
+		rollbackErr := tx.Rollback(ctx)
+
+		if rollbackErr == nil {
+			return
+		}
+
+		s.logger.Error().Err(rollbackErr).Msg("failed to rollback tx")
+	}()
 
 	createProfileRow := tx.QueryRow(ctx, createProfileQuery, profile.Name)
 	if err := createProfileRow.Scan(&profileID); err != nil {
@@ -258,13 +274,22 @@ func (s *ScoutStorage) CreateProfile(ctx context.Context, profile models.Profile
 	return profileID, nil
 }
 
+//nolint:gocognit,funlen // TODO: refactor
 func (s *ScoutStorage) UpdateProfile(ctx context.Context, update models.ProfileUpdate) error {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("begin tx: %w", err)
 	}
 
-	defer tx.Rollback(ctx)
+	defer func() {
+		rollbackErr := tx.Rollback(ctx)
+
+		if rollbackErr == nil {
+			return
+		}
+
+		s.logger.Error().Err(rollbackErr).Msg("failed to rollback tx")
+	}()
 
 	// Updating profile
 
@@ -277,12 +302,12 @@ func (s *ScoutStorage) UpdateProfile(ctx context.Context, update models.ProfileU
 		updateProfileSb = updateProfileSb.Set("name", *update.Name)
 	}
 
-	updateProfileSql, updateProfileArgs, err := updateProfileSb.ToSql()
+	updateProfileSQL, updateProfileArgs, err := updateProfileSb.ToSql()
 	if err != nil {
 		return fmt.Errorf("updateProfileSb to sql: %w", err)
 	}
 
-	_, err = tx.Exec(ctx, updateProfileSql, updateProfileArgs...)
+	_, err = tx.Exec(ctx, updateProfileSQL, updateProfileArgs...)
 	if err != nil {
 		return fmt.Errorf("update scout.profiles: %w", err)
 	}
@@ -306,12 +331,12 @@ func (s *ScoutStorage) UpdateProfile(ctx context.Context, update models.ProfileU
 				Where(sq.Eq{"profile_id": update.ProfileID}).
 				Where(sq.Eq{"source": source})
 
-			deleteSettingsSql, deleteSettingsArgs, err := sb.ToSql()
+			deleteSettingsSQL, deleteSettingsArgs, err := sb.ToSql()
 			if err != nil {
 				return fmt.Errorf("deleteSettingsSb to sql: %w", err)
 			}
 
-			_, err = tx.Exec(ctx, deleteSettingsSql, deleteSettingsArgs...)
+			_, err = tx.Exec(ctx, deleteSettingsSQL, deleteSettingsArgs...)
 			if err != nil {
 				return fmt.Errorf("delete scout.profile_settings: %w", err)
 			}
@@ -334,12 +359,12 @@ func (s *ScoutStorage) UpdateProfile(ctx context.Context, update models.ProfileU
 			Values(update.ProfileID, source, "", "{}").
 			Suffix("ON CONFLICT DO NOTHING")
 
-		insertSettingsSql, insertSettingsArgs, err := insertSettingsSb.ToSql()
+		insertSettingsSQL, insertSettingsArgs, err := insertSettingsSb.ToSql()
 		if err != nil {
 			return fmt.Errorf("insertSettingsSb to sql: %w", err)
 		}
 
-		_, err = tx.Exec(ctx, insertSettingsSql, insertSettingsArgs...)
+		_, err = tx.Exec(ctx, insertSettingsSQL, insertSettingsArgs...)
 		if err != nil {
 			return fmt.Errorf("insert scout.profile_settings: %w", err)
 		}
@@ -363,12 +388,12 @@ func (s *ScoutStorage) UpdateProfile(ctx context.Context, update models.ProfileU
 			sb = sb.Set("extracted_properties", extractedPropertiesJSON)
 		}
 
-		updateSettingsSql, updateSettingsArgs, err := sb.ToSql()
+		updateSettingsSQL, updateSettingsArgs, err := sb.ToSql()
 		if err != nil {
 			return fmt.Errorf("updateSettingsSb to sql: %w", err)
 		}
 
-		_, err = tx.Exec(ctx, updateSettingsSql, updateSettingsArgs...)
+		_, err = tx.Exec(ctx, updateSettingsSQL, updateSettingsArgs...)
 		if err != nil {
 			return fmt.Errorf("update scout.profile_settings: %w", err)
 		}
@@ -381,7 +406,11 @@ func (s *ScoutStorage) UpdateProfile(ctx context.Context, update models.ProfileU
 	return nil
 }
 
-func (s *ScoutStorage) UpdateTags(ctx context.Context, detectionID int64, update models.DetectionTagsUpdate) (models.DetectionTags, error) {
+func (s *ScoutStorage) UpdateTags(
+	ctx context.Context,
+	detectionID int64,
+	update models.DetectionTagsUpdate,
+) (models.DetectionTags, error) {
 	if !update.RelevancyDetectedCorrectly.IsSet() {
 		return models.DetectionTags{}, nil
 	}
@@ -433,14 +462,17 @@ func (s *ScoutStorage) GetDetectionTags(ctx context.Context, detectionIDs []int6
 		result = append(result, detectionTags)
 	}
 
-	if rows.Err() != nil {
+	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("rows err: %w", err)
 	}
 
 	return result, nil
 }
 
-func (s *ScoutStorage) ListDetections(ctx context.Context, query models.DetectionQuery) ([]models.DetectionRecord, error) {
+func (s *ScoutStorage) ListDetections(
+	ctx context.Context,
+	query models.DetectionQuery,
+) ([]models.DetectionRecord, error) {
 	sb := tools.Psq().
 		Select(
 			"d.id",
@@ -452,7 +484,7 @@ func (s *ScoutStorage) ListDetections(ctx context.Context, query models.Detectio
 			"d.created_at",
 		).
 		From("scout.detections d").
-		Limit(uint64(query.Limit))
+		Limit(uint64(max(0, query.Limit))) //nolint:gosec // limit value can't overflow uint64
 
 	switch query.Order {
 	case models.DetectionOrderAsc:
@@ -525,14 +557,19 @@ func (s *ScoutStorage) ListDetections(ctx context.Context, query models.Detectio
 		result = append(result, detection)
 	}
 
-	if rows.Err() != nil {
+	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("rows err: %w", err)
 	}
 
 	return result, nil
 }
 
-func (s *ScoutStorage) GetPresentDetectionsForProfile(ctx context.Context, profileID int64, source string, sourceIDs []string) ([]string, error) {
+func (s *ScoutStorage) GetPresentDetectionsForProfile(
+	ctx context.Context,
+	profileID int64,
+	source string,
+	sourceIDs []string,
+) ([]string, error) {
 	query := `
 		SELECT DISTINCT source_id
 		FROM scout.detections
@@ -558,7 +595,7 @@ func (s *ScoutStorage) GetPresentDetectionsForProfile(ctx context.Context, profi
 		result = append(result, sourceID)
 	}
 
-	if rows.Err() != nil {
+	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("rows err: %w", err)
 	}
 

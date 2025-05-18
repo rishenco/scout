@@ -9,9 +9,10 @@ import (
 	sq "github.com/Masterminds/squirrel"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/rs/zerolog"
+
 	"github.com/rishenco/scout/internal/sources/reddit"
 	"github.com/rishenco/scout/internal/tools"
-	"github.com/rs/zerolog"
 )
 
 type Storage struct {
@@ -143,7 +144,11 @@ func (s *Storage) CheckPresence(ctx context.Context, postIDs []string) (map[stri
 	return presence, nil
 }
 
-func (s *Storage) GetPostsForEnrichment(ctx context.Context, postCreatedBefore time.Time, limit int) (postIDs []string, err error) {
+func (s *Storage) GetPostsForEnrichment(
+	ctx context.Context,
+	postCreatedBefore time.Time,
+	limit int,
+) (postIDs []string, err error) {
 	query := `
 		SELECT post_id
 		FROM reddit.posts
@@ -174,7 +179,11 @@ func (s *Storage) GetPostsForEnrichment(ctx context.Context, postCreatedBefore t
 	return postIDs, nil
 }
 
-func (s *Storage) GetPostsForScheduling(ctx context.Context, batchSize int, minScore int) (posts []reddit.PostAndComments, err error) {
+func (s *Storage) GetPostsForScheduling(
+	ctx context.Context,
+	batchSize int,
+	minScore int,
+) (posts []reddit.PostAndComments, err error) {
 	query := `
 		SELECT enriched_post_json
 		FROM reddit.posts
@@ -271,7 +280,10 @@ func (s *Storage) GetPosts(ctx context.Context, postIDs []string) (posts []reddi
 	return posts, nil
 }
 
-func (s *Storage) GetSubredditsSettings(ctx context.Context, subreddits []string) (subredditsSettings []reddit.SubredditSettings, err error) {
+func (s *Storage) GetSubredditsSettings(
+	ctx context.Context,
+	subreddits []string,
+) (subredditsSettings []reddit.SubredditSettings, err error) {
 	query := `
 		SELECT subreddit, profiles
 		FROM reddit.subreddit_settings
@@ -370,7 +382,10 @@ func (s *Storage) GetAllSubredditSettings(ctx context.Context) ([]reddit.Subredd
 	return settings, nil
 }
 
-func (s *Storage) GetAllSubredditSettingsWithProfileID(ctx context.Context, profileID int64) ([]reddit.SubredditSettings, error) {
+func (s *Storage) GetAllSubredditSettingsWithProfileID(
+	ctx context.Context,
+	profileID int64,
+) ([]reddit.SubredditSettings, error) {
 	query := `
 		SELECT subreddit, profiles
 		FROM reddit.subreddit_settings
@@ -459,7 +474,12 @@ func (s *Storage) RemoveProfileFromAllSubredditSettings(ctx context.Context, pro
 	return nil
 }
 
-func (s *Storage) GetScheduledPostIDsFromSubreddits(ctx context.Context, subreddits []string, days *int, limit *int) ([]string, error) {
+func (s *Storage) GetScheduledPostIDsFromSubreddits(
+	ctx context.Context,
+	subreddits []string,
+	days *int,
+	limit *int,
+) ([]string, error) {
 	psq := tools.Psq().
 		Select("post_id").
 		From("reddit.posts").
@@ -473,7 +493,11 @@ func (s *Storage) GetScheduledPostIDsFromSubreddits(ctx context.Context, subredd
 	}
 
 	if limit != nil {
-		psq = psq.Limit(uint64(*limit))
+		limitValue := *limit
+		limitValue = max(0, limitValue)
+
+		//nolint:gosec // limit value can't overflow uint64
+		psq = psq.Limit(uint64(limitValue))
 	}
 
 	query, args, err := psq.ToSql()

@@ -28,10 +28,12 @@ import (
 	"github.com/rishenco/scout/internal/tools"
 )
 
+//nolint:gochecknoglobals // globals are fine for an entrypoint
 var (
 	settingsConfigPath = flag.String("settings", "settings.yaml", "path to settings config")
 )
 
+//nolint:funlen // TODO: split into smaller functions
 func main() {
 	flag.Parse()
 
@@ -72,6 +74,7 @@ func main() {
 			Temperature: settingsConfig.Google.Temperature,
 		},
 		tools.WrapRequestsStorage(requestsStorage, "reddit_gemini_analyzer"),
+		settingsConfig.Reddit.AI.MaxCommentsPerPost,
 		componentLogger(logger, "reddit_gemini_analyzer"),
 	)
 	if err != nil {
@@ -86,11 +89,11 @@ func main() {
 
 	redditClient, err := redditclient.New(
 		redditclient.RedditAuth{
-			ClientID:     credentialsConfig.RedditClientID,
-			ClientSecret: credentialsConfig.RedditClientSecret,
-			Username:     credentialsConfig.RedditUsername,
-			Password:     credentialsConfig.RedditPassword,
-			UserAgent:    credentialsConfig.RedditUserAgent,
+			ClientID:     credentialsConfig.Reddit.ClientID,
+			ClientSecret: credentialsConfig.Reddit.ClientSecret,
+			Username:     credentialsConfig.Reddit.Username,
+			Password:     credentialsConfig.Reddit.Password,
+			UserAgent:    credentialsConfig.Reddit.UserAgent,
 		},
 		tools.WrapRequestsStorage(requestsStorage, "reddit_client"),
 		componentLogger(logger, "reddit_client"),
@@ -143,7 +146,6 @@ func main() {
 	scoutProcessor := scout.NewTaskProcessor(
 		taskStorage,
 		scoutService,
-		settingsConfig.TaskProcessor.BatchSize,
 		settingsConfig.TaskProcessor.Timeout,
 		settingsConfig.TaskProcessor.ErrorTimeout,
 		settingsConfig.TaskProcessor.NoTasksTimeout,
@@ -210,14 +212,20 @@ func main() {
 		ginEngine.StaticFile("swagger.yaml", "./api/swagger.yaml")
 
 		httpServer := &http.Server{
-			Addr:    fmt.Sprintf(":%d", settingsConfig.API.Port),
-			Handler: ginEngine,
+			Addr:              fmt.Sprintf(":%d", settingsConfig.API.Port),
+			Handler:           ginEngine,
+			ReadHeaderTimeout: time.Minute,
 		}
 
 		go func() {
 			<-ctx.Done()
 
-			shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
+			//nolint:contextcheck // there's no other context to use
+			shutdownCtx, shutdownCancel := context.WithTimeout(
+				context.Background(),
+				//nolint:mnd // currently hardcoded
+				5*time.Second,
+			)
 			defer shutdownCancel()
 
 			if err := httpServer.Shutdown(shutdownCtx); err != nil {

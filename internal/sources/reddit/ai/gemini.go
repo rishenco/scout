@@ -3,6 +3,7 @@ package ai
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sort"
 
@@ -24,10 +25,11 @@ type GeminiSettings struct {
 }
 
 type Gemini struct {
-	client      *genai.Client
-	settings    GeminiSettings
-	requestsLog requestsLog
-	logger      zerolog.Logger
+	client             *genai.Client
+	settings           GeminiSettings
+	requestsLog        requestsLog
+	maxCommentsPerPost int
+	logger             zerolog.Logger
 }
 
 func NewGemini(
@@ -35,6 +37,7 @@ func NewGemini(
 	apiKey string,
 	settings GeminiSettings,
 	requestsLog requestsLog,
+	maxCommentsPerPost int,
 	logger zerolog.Logger,
 ) (*Gemini, error) {
 	client, err := genai.NewClient(ctx, option.WithAPIKey(apiKey))
@@ -43,10 +46,11 @@ func NewGemini(
 	}
 
 	return &Gemini{
-		client:      client,
-		settings:    settings,
-		requestsLog: requestsLog,
-		logger:      logger,
+		client:             client,
+		settings:           settings,
+		requestsLog:        requestsLog,
+		maxCommentsPerPost: maxCommentsPerPost,
+		logger:             logger,
 	}, nil
 }
 
@@ -57,10 +61,7 @@ func (a *Gemini) Analyze(
 ) (detection models.Detection, err error) {
 	logger := a.logger.With().Str("post_id", post.ID()).Str("source", post.Source()).Logger()
 
-	postInputObject, err := a.prepareInputObject(profileSettings, post)
-	if err != nil {
-		return models.Detection{}, fmt.Errorf("convert post to input object: %w", err)
-	}
+	postInputObject := a.prepareInputObject(profileSettings, post)
 
 	postInputObjectJSON, err := json.Marshal(postInputObject)
 	if err != nil {
@@ -72,8 +73,8 @@ func (a *Gemini) Analyze(
 	// Set model parameters
 	model.SetTemperature(a.settings.Temperature)
 	model.SetTopK(0)
-	model.SetTopP(0.95)
-	model.SetMaxOutputTokens(8192)
+	model.SetTopP(0.95)            //nolint:mnd // Currently hardcoded
+	model.SetMaxOutputTokens(8192) //nolint:mnd // Currently hardcoded
 	model.ResponseSchema = a.getResponseSchema(profileSettings.ExtractedProperties)
 	model.ResponseMIMEType = "application/json"
 	model.SystemInstruction = &genai.Content{
@@ -95,12 +96,12 @@ func (a *Gemini) Analyze(
 	}
 
 	if len(resp.Candidates) == 0 || len(resp.Candidates[0].Content.Parts) == 0 {
-		return models.Detection{}, fmt.Errorf("no content generated")
+		return models.Detection{}, errors.New("no content generated")
 	}
 
 	outputMessage, ok := resp.Candidates[0].Content.Parts[0].(genai.Text)
 	if !ok {
-		return models.Detection{}, fmt.Errorf("invalid response format")
+		return models.Detection{}, errors.New("invalid response format")
 	}
 
 	// Parse response
@@ -156,7 +157,10 @@ func (a *Gemini) getResponseSchema(extractedProperties map[string]string) *genai
 	return responseSchema
 }
 
-func (a *Gemini) prepareInputObject(profileSettings models.ProfileSettings, post reddit.PostAndComments) (redditInputObject, error) {
+func (a *Gemini) prepareInputObject(
+	profileSettings models.ProfileSettings,
+	post reddit.PostAndComments,
+) redditInputObject {
 	// Sort comments by score in descending order
 	sort.Slice(post.Comments, func(i, j int) bool {
 		return post.Comments[i].Score > post.Comments[j].Score
@@ -164,7 +168,7 @@ func (a *Gemini) prepareInputObject(profileSettings models.ProfileSettings, post
 
 	comments := make([]redditInputCommentObject, 0)
 
-	commentsCount := min(len(post.Comments), 10)
+	commentsCount := min(len(post.Comments), a.maxCommentsPerPost)
 
 	for _, comment := range post.Comments[:commentsCount] {
 		comments = append(comments, redditInputCommentObject{
@@ -185,5 +189,5 @@ func (a *Gemini) prepareInputObject(profileSettings models.ProfileSettings, post
 		ExtractedProperties: profileSettings.ExtractedProperties,
 	}
 
-	return inputObject, nil
+	return inputObject
 }

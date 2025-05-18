@@ -2,12 +2,15 @@ package reddit
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/rs/zerolog"
 	"github.com/samber/lo"
 )
+
+const maxPostsPerRequest = 100
 
 type scraperStorage interface {
 	InsertPosts(ctx context.Context, posts []Post) error
@@ -29,7 +32,7 @@ type Scraper struct {
 	logger                        zerolog.Logger
 }
 
-// NewScraper creates a new Scraper instance
+// NewScraper creates a new Scraper instance.
 func NewScraper(
 	reddit scraperReddit,
 	storage scraperStorage,
@@ -50,7 +53,7 @@ func NewScraper(
 	}
 }
 
-// Start begins periodically reading posts from all subreddits
+// Start begins periodically reading posts from all subreddits.
 func (s *Scraper) Start(ctx context.Context) error {
 	s.logger.Info().
 		Dur("timeout", s.timeout).
@@ -58,7 +61,7 @@ func (s *Scraper) Start(ctx context.Context) error {
 		Dur("timeout_after_full_scan", s.timeoutAfterFullScan).
 		Msg("starting Reddit reader")
 
-	paginator_ := newPaginator()
+	paginator := newPaginator()
 
 	for {
 		if ctx.Err() != nil {
@@ -67,7 +70,7 @@ func (s *Scraper) Start(ctx context.Context) error {
 
 		timeout := s.timeout
 
-		if err := s.poll(ctx, paginator_); err != nil {
+		if err := s.poll(ctx, paginator); err != nil {
 			s.logger.Error().Err(err).Msg("error updating subreddits")
 
 			timeout = s.errorTimeout
@@ -82,15 +85,16 @@ func (s *Scraper) Start(ctx context.Context) error {
 	}
 }
 
-func (s *Scraper) poll(ctx context.Context, paginator_ *paginator) error {
-	if err := s.syncSubreddits(ctx, paginator_); err != nil {
+//nolint:funlen // TODO: refactor
+func (s *Scraper) poll(ctx context.Context, paginator *paginator) error {
+	if err := s.syncSubreddits(ctx, paginator); err != nil {
 		return fmt.Errorf("sync subreddits: %w", err)
 	}
 
 	// select subreddit
 	var subreddit string
 
-	for subredditCandidate, pagination := range paginator_.subreddits {
+	for subredditCandidate, pagination := range paginator.subreddits {
 		if time.Now().Before(pagination.availableAt) {
 			continue
 		}
@@ -101,15 +105,20 @@ func (s *Scraper) poll(ctx context.Context, paginator_ *paginator) error {
 	}
 
 	if subreddit == "" {
-		return fmt.Errorf("no subreddit to poll")
+		return errors.New("no subreddit to poll")
 	}
 
 	s.logger.Info().
 		Str("subreddit", subreddit).
-		Str("next_page", paginator_.subreddits[subreddit].next).
+		Str("next_page", paginator.subreddits[subreddit].next).
 		Msg("polling subreddit")
 
-	redditPosts, nextPage, err := s.reddit.GetPosts(ctx, subreddit, paginator_.subreddits[subreddit].next, 100)
+	redditPosts, nextPage, err := s.reddit.GetPosts(
+		ctx,
+		subreddit,
+		paginator.subreddits[subreddit].next,
+		maxPostsPerRequest,
+	)
 	if err != nil {
 		return fmt.Errorf("get posts: %w", err)
 	}
@@ -120,12 +129,12 @@ func (s *Scraper) poll(ctx context.Context, paginator_ *paginator) error {
 			Str("subreddit", subreddit).
 			Msg("no posts, meaning we've exhausted the subreddit")
 
-		paginator_.subreddits[subreddit] = subredditPagination{
+		paginator.subreddits[subreddit] = subredditPagination{
 			next:        "",
 			availableAt: time.Now().Add(s.timeoutAfterFullScan),
 		}
 
-		paginator_.alreadyFullyScanned[subreddit] = struct{}{}
+		paginator.alreadyFullyScanned[subreddit] = struct{}{}
 
 		return nil
 	}
@@ -148,14 +157,14 @@ func (s *Scraper) poll(ctx context.Context, paginator_ *paginator) error {
 	if len(notPresentPosts) == 0 {
 		// we've reached the page we've processed
 
-		_, fullyScanned := paginator_.alreadyFullyScanned[subreddit]
+		_, fullyScanned := paginator.alreadyFullyScanned[subreddit]
 
 		if fullyScanned || !s.forceAtLeastOneExhaustingScan {
 			s.logger.Info().
 				Str("subreddit", subreddit).
 				Msg("we've reached the page without new posts - cooldown and scanning from the beginning")
 
-			paginator_.subreddits[subreddit] = subredditPagination{
+			paginator.subreddits[subreddit] = subredditPagination{
 				next:        "",
 				availableAt: time.Now().Add(s.timeoutAfterFullScan),
 			}
@@ -164,11 +173,11 @@ func (s *Scraper) poll(ctx context.Context, paginator_ *paginator) error {
 		}
 	}
 
-	if err := s.storage.InsertPosts(ctx, notPresentPosts); err != nil {
-		return fmt.Errorf("insert: %w", err)
+	if insertErr := s.storage.InsertPosts(ctx, notPresentPosts); insertErr != nil {
+		return fmt.Errorf("insert: %w", insertErr)
 	}
 
-	paginator_.subreddits[subreddit] = subredditPagination{
+	paginator.subreddits[subreddit] = subredditPagination{
 		next:        nextPage,
 		availableAt: time.Now(),
 	}

@@ -3,11 +3,13 @@ package reddit
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
-	"github.com/rishenco/scout/pkg/models"
 	"github.com/rs/zerolog"
 	"github.com/samber/lo"
+
+	"github.com/rishenco/scout/pkg/models"
 )
 
 type toolkitStorage interface {
@@ -46,14 +48,18 @@ func NewToolkit(storage toolkitStorage, analyzer analyzer, logger zerolog.Logger
 	}
 }
 
-func (t *Toolkit) Analyze(ctx context.Context, postID string, profileSettings models.ProfileSettings) (models.Detection, error) {
+func (t *Toolkit) Analyze(
+	ctx context.Context,
+	postID string,
+	profileSettings models.ProfileSettings,
+) (models.Detection, error) {
 	posts, err := t.storage.GetPosts(ctx, []string{postID})
 	if err != nil {
 		return models.Detection{}, fmt.Errorf("get reddit post: %w", err)
 	}
 
 	if len(posts) == 0 {
-		return models.Detection{}, fmt.Errorf("post not found")
+		return models.Detection{}, errors.New("post not found")
 	}
 
 	detection, err := t.analyzer.Analyze(ctx, posts[0], profileSettings)
@@ -80,8 +86,8 @@ func (t *Toolkit) GetSourcePosts(ctx context.Context, ids []string) ([]models.So
 			continue
 		}
 
-		if err := json.Unmarshal(rawPost.Data, &sourcePost.Post); err != nil {
-			return nil, fmt.Errorf("unmarshal post: %w", err)
+		if unmarshalErr := json.Unmarshal(rawPost.Data, &sourcePost.Post); unmarshalErr != nil {
+			return nil, fmt.Errorf("unmarshal post: %w", unmarshalErr)
 		}
 
 		posts = append(posts, sourcePost)
@@ -94,7 +100,10 @@ func (t *Toolkit) GetAllSubredditSettings(ctx context.Context) ([]SubredditSetti
 	return t.storage.GetAllSubredditSettings(ctx)
 }
 
-func (t *Toolkit) GetAllSubredditSettingsWithProfileID(ctx context.Context, profileID int64) ([]SubredditSettings, error) {
+func (t *Toolkit) GetAllSubredditSettingsWithProfileID(
+	ctx context.Context,
+	profileID int64,
+) ([]SubredditSettings, error) {
 	return t.storage.GetAllSubredditSettingsWithProfileID(ctx, profileID)
 }
 
@@ -106,7 +115,12 @@ func (t *Toolkit) RemoveProfilesFromSubreddit(ctx context.Context, subreddit str
 	return t.storage.RemoveProfilesFromSubreddit(ctx, subreddit, profileIDs)
 }
 
-func (t *Toolkit) GetScheduledSourceIDs(ctx context.Context, profileIDs []int64, days *int, limit *int) ([]string, error) {
+func (t *Toolkit) GetScheduledSourceIDs(
+	ctx context.Context,
+	profileIDs []int64,
+	days *int,
+	limit *int,
+) ([]string, error) {
 	allSubredditSettings, err := t.storage.GetAllSubredditSettingsWithProfileID(ctx, profileIDs[0])
 	if err != nil {
 		return nil, fmt.Errorf("get subreddit settings: %w", err)
@@ -129,9 +143,9 @@ func (t *Toolkit) GetScheduledSourceIDs(ctx context.Context, profileIDs []int64,
 	for _, profileID := range profileIDs {
 		subreddits := lo.Keys(profileToSubreddits[profileID])
 
-		postIDs, err := t.storage.GetScheduledPostIDsFromSubreddits(ctx, subreddits, days, limit)
-		if err != nil {
-			return nil, fmt.Errorf("get post IDs from subreddits: %w", err)
+		postIDs, getIDsErr := t.storage.GetScheduledPostIDsFromSubreddits(ctx, subreddits, days, limit)
+		if getIDsErr != nil {
+			return nil, fmt.Errorf("get post IDs from subreddits: %w", getIDsErr)
 		}
 
 		for _, postID := range postIDs {

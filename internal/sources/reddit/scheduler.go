@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/rishenco/scout/internal/sources"
-	"github.com/rishenco/scout/pkg/models"
 	"github.com/rs/zerolog"
 	"github.com/samber/lo"
+
+	"github.com/rishenco/scout/internal/sources"
+	"github.com/rishenco/scout/pkg/models"
 )
 
 type schedulerStorage interface {
@@ -88,9 +89,12 @@ func (s *Scheduler) schedulePosts(ctx context.Context) error {
 		return fmt.Errorf("get subreddits settings: %w", err)
 	}
 
-	subredditSettingsIndex := lo.SliceToMap(subredditsSettings, func(setting SubredditSettings) (string, SubredditSettings) {
-		return setting.Subreddit, setting
-	})
+	subredditSettingsIndex := lo.SliceToMap(
+		subredditsSettings,
+		func(setting SubredditSettings) (string, SubredditSettings) {
+			return setting.Subreddit, setting
+		},
+	)
 
 	tasks := make([]models.AnalysisTask, 0)
 
