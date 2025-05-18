@@ -34,3 +34,5 @@ __debug_bin*
 
 .vite
 node_modules
+
+.idea

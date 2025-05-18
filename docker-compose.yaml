@@ -32,7 +32,7 @@ services:
       
   scout:
     env_file:
-      - ./.env
+      - ./.env.docker
     build:
       context: .
       dockerfile: ./Dockerfile
