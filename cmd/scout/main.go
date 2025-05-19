@@ -62,8 +62,15 @@ func main() {
 	defer postgresPool.Close()
 
 	scoutStorage := pg.NewScoutStorage(postgresPool, componentLogger(logger, "scout_storage"))
-	taskStorage := pg.NewTaskStorage(postgresPool, componentLogger(logger, "task_storage"))
-	requestsStorage := pg.NewRequestsStorage(postgresPool, componentLogger(logger, "requests_storage"))
+	taskStorage := pg.NewTaskStorage(
+		postgresPool,
+		settingsConfig.TaskProcessor.TaskErrorTimeout,
+		componentLogger(logger, "task_storage"),
+	)
+	requestsStorage := pg.NewRequestsStorage(
+		postgresPool,
+		componentLogger(logger, "requests_storage"),
+	)
 	redditStorage := redditpg.NewStorage(postgresPool, componentLogger(logger, "reddit_storage"))
 
 	redditGeminiAI, err := redditanalyzers.NewGemini(
@@ -149,6 +156,7 @@ func main() {
 		settingsConfig.TaskProcessor.Timeout,
 		settingsConfig.TaskProcessor.ErrorTimeout,
 		settingsConfig.TaskProcessor.NoTasksTimeout,
+		settingsConfig.TaskProcessor.MaxAttempts,
 		settingsConfig.TaskProcessor.Workers,
 		componentLogger(logger, "processor"),
 	)

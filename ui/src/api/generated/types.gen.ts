@@ -25,7 +25,10 @@ export type ProfileSettings = {
 };
 
 export type ProfileJumpstartRequest = {
-    profile_id: number;
+    /**
+     * Whether to exclude already analyzed posts.
+     */
+    exclude_already_analyzed?: boolean;
     /**
      * How many days to go back in time to analyze. If null, analyze all posts.
      */

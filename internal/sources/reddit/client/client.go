@@ -67,11 +67,6 @@ func (c *Client) GetPosts(
 	after string,
 	limit int,
 ) (posts []reddit.Post, nextAfter string, err error) {
-	c.logger.Debug().
-		Str("subreddit", subreddit).
-		Str("after", after).
-		Msg("retrieving posts")
-
 	limit = min(limit, maxLimit)
 
 	// Define the listing options
@@ -85,11 +80,6 @@ func (c *Client) GetPosts(
 	if err != nil {
 		return nil, "", fmt.Errorf("get new posts: %w", err)
 	}
-
-	c.logger.Info().
-		Str("subreddit", subreddit).
-		Int("posts_count", len(libPosts)).
-		Msg("retrieved posts")
 
 	posts = lo.Map(libPosts, func(post *redditlib.Post, _ int) reddit.Post {
 		return reddit.PostFromLib(post)

@@ -53,6 +53,10 @@ CREATE TABLE IF NOT EXISTS scout.analysis_tasks (
     claimed_at TIMESTAMP WITH TIME ZONE,
     is_committed BOOLEAN NOT NULL DEFAULT FALSE,
     committed_at TIMESTAMP WITH TIME ZONE,
+    is_failed BOOLEAN NOT NULL DEFAULT FALSE,
+    failed_at TIMESTAMP WITH TIME ZONE,
+    claim_available_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    errors TEXT[],
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 

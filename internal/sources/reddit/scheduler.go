@@ -110,10 +110,12 @@ func (s *Scheduler) schedulePosts(ctx context.Context) error {
 
 		for _, profileID := range subredditSettings.Profiles {
 			tasks = append(tasks, models.AnalysisTask{
-				SourceID:   redditPost.Post.ID,
-				ProfileID:  profileID,
-				Source:     sources.RedditSource,
-				ShouldSave: true,
+				Parameters: models.AnalysisParameters{
+					SourceID:   redditPost.Post.ID,
+					ProfileID:  profileID,
+					Source:     sources.RedditSource,
+					ShouldSave: true,
+				},
 			})
 		}
 	}

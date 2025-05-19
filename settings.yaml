@@ -1,12 +1,15 @@
 # Scout uses Gemini API to analyze posts.
 google:
-  model: "gemini-2.0-flash" # Model name
+  model: "gemini-2.5-flash-preview-04-17" # Model name
+  # model: "gemini-2.0-flash" # Model name
   temperature: 0.25 # Temperature for the model
 
 # Scout uses a task queue to analyze posts.
 # Task processor claims those tasks and passes them to Scout service.
 task_processor:
   workers: 15 # Number of parallel workers processing tasks
+  max_attempts: 3 # Maximum number of attempts to process a task
+  task_error_timeout: 1m # Timeout before claiming a new task after an error
   timeout: 1s # Timeout before claiming a new task
   error_timeout: 3s # Timeout before claiming a new task after an error
   no_tasks_timeout: 5s # Timeout before claiming a new task if there were no tasks
@@ -18,7 +21,7 @@ api:
 
 reddit:
   ai:
-    max_comments_per_post: 10 # Maximum number of comments to analyze per post
+    max_comments_per_post: 4 # Maximum number of comments to analyze per post
 
   # Scrapes posts from subreddits and saves them to the database.
   # Each requests loads up to 100 posts from a subreddit.

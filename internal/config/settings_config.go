@@ -18,11 +18,13 @@ type SettingsConfig struct {
 	} `json:"google" yaml:"google"`
 
 	TaskProcessor struct {
-		Workers        int           `json:"workers" yaml:"workers"`
-		Timeout        time.Duration `json:"timeout" yaml:"timeout"`
-		ErrorTimeout   time.Duration `json:"error_timeout" yaml:"error_timeout"`
-		NoTasksTimeout time.Duration `json:"no_tasks_timeout" yaml:"no_tasks_timeout"`
-		Disabled       bool          `json:"disabled" yaml:"disabled"`
+		Workers          int           `json:"workers" yaml:"workers"`
+		MaxAttempts      int           `json:"max_attempts" yaml:"max_attempts"`
+		TaskErrorTimeout time.Duration `json:"task_error_timeout" yaml:"task_error_timeout"`
+		Timeout          time.Duration `json:"timeout" yaml:"timeout"`
+		ErrorTimeout     time.Duration `json:"error_timeout" yaml:"error_timeout"`
+		NoTasksTimeout   time.Duration `json:"no_tasks_timeout" yaml:"no_tasks_timeout"`
+		Disabled         bool          `json:"disabled" yaml:"disabled"`
 	} `json:"task_processor" yaml:"task_processor"`
 
 	API struct {

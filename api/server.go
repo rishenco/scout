@@ -34,7 +34,13 @@ type scout interface {
 	GetDetectionTags(ctx context.Context, detectionIDs []int64) ([]models.DetectionTags, error)
 	GetSourcePosts(ctx context.Context, source string, sourceIDs []string) ([]models.SourcePost, error)
 	ListDetections(ctx context.Context, query models.DetectionQuery) ([]models.DetectionRecord, error)
-	JumpstartProfile(ctx context.Context, profileID int64, jumpstartPeriod *int, limit *int) error
+	JumpstartProfile(
+		ctx context.Context,
+		profileID int64,
+		excludeAlreadyAnalyzed bool,
+		jumpstartPeriod *int,
+		limit *int,
+	) error
 }
 
 type redditToolkit interface {
@@ -391,6 +397,7 @@ func (s *Server) PostApiProfilesIdJumpstart(
 	request oapi.PostApiProfilesIdJumpstartRequestObject,
 ) (oapi.PostApiProfilesIdJumpstartResponseObject, error) {
 	var jumpstartDays, jumpstartLimit *int
+	var excludeAlreadyAnalyzed bool
 
 	if request.Body.JumpstartPeriod != nil {
 		jumpstartDays = request.Body.JumpstartPeriod
@@ -400,7 +407,11 @@ func (s *Server) PostApiProfilesIdJumpstart(
 		jumpstartLimit = request.Body.Limit
 	}
 
-	if err := s.scout.JumpstartProfile(ctx, int64(request.Id), jumpstartDays, jumpstartLimit); err != nil {
+	if request.Body.ExcludeAlreadyAnalyzed != nil {
+		excludeAlreadyAnalyzed = *request.Body.ExcludeAlreadyAnalyzed
+	}
+
+	if err := s.scout.JumpstartProfile(ctx, int64(request.Id), excludeAlreadyAnalyzed, jumpstartDays, jumpstartLimit); err != nil {
 		//nolint:nilerr // error is passed to response
 		return oapi.PostApiProfilesIdJumpstart500JSONResponse{Error: err.Error()}, nil
 	}

@@ -1,6 +1,8 @@
-# Idea Searcher
+# Scout
 
-A service that collects project ideas from Reddit, processes them using OpenAI, and saves them to PostgreSQL.
+<Description of Scout functionality>
+
+
 
 ## Setup
 

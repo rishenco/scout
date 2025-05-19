@@ -63,8 +63,6 @@ func (e *Enricher) Start(ctx context.Context) error {
 
 		timeout := e.timeout
 
-		e.logger.Info().Msg("enriching posts")
-
 		if err := e.enrichPosts(ctx); err != nil {
 			e.logger.Error().Err(err).Msg("error enriching posts")
 
@@ -118,7 +116,9 @@ func (e *Enricher) enrichPosts(ctx context.Context) error {
 		return fmt.Errorf("save posts: %w", err)
 	}
 
-	e.logger.Info().Msg("enriched posts")
+	for _, post := range posts {
+		e.logger.Info().Str("post_id", post.ID()).Msg("enriched post")
+	}
 
 	return nil
 }
@@ -151,8 +151,6 @@ func (e *Enricher) loadPost(ctx context.Context, postID string) (PostAndComments
 	err := e.retry(
 		ctx,
 		func() error {
-			e.logger.Info().Str("post_id", postID).Msg("loading post")
-
 			post, err := e.reddit.GetPost(ctx, postID)
 			if err != nil {
 				return fmt.Errorf("get post: %w", err)

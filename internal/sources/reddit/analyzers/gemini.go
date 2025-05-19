@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/google/generative-ai-go/genai"
 	"github.com/rs/zerolog"
-	"google.golang.org/api/option"
+	"github.com/samber/lo"
+	"google.golang.org/genai"
 
 	"github.com/rishenco/scout/internal/sources/reddit"
 	"github.com/rishenco/scout/pkg/models"
@@ -40,7 +40,9 @@ func NewGemini(
 	maxCommentsPerPost int,
 	logger zerolog.Logger,
 ) (*Gemini, error) {
-	client, err := genai.NewClient(ctx, option.WithAPIKey(apiKey))
+	client, err := genai.NewClient(ctx, &genai.ClientConfig{
+		APIKey: apiKey,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("new client: %w", err)
 	}
@@ -68,21 +70,45 @@ func (a *Gemini) Analyze(
 		return models.Detection{}, fmt.Errorf("marshal input object to json: %w", err)
 	}
 
-	model := a.client.GenerativeModel(a.settings.Model)
-
-	// Set model parameters
-	model.SetTemperature(a.settings.Temperature)
-	model.SetTopK(0)
-	model.SetTopP(0.95)            //nolint:mnd // Currently hardcoded
-	model.SetMaxOutputTokens(8192) //nolint:mnd // Currently hardcoded
-	model.ResponseSchema = a.getResponseSchema(profileSettings.ExtractedProperties)
-	model.ResponseMIMEType = "application/json"
-	model.SystemInstruction = &genai.Content{
-		Parts: []genai.Part{genai.Text(Prompt)},
+	cfg := &genai.GenerateContentConfig{
+		HTTPOptions:       &genai.HTTPOptions{},
+		SystemInstruction: genai.Text(Prompt)[0],
+		Temperature:       lo.ToPtr(a.settings.Temperature),
+		TopP:              lo.ToPtr(float32(0.95)), //nolint:mnd // Currently hardcoded
+		TopK:              lo.ToPtr(float32(0)),
+		// CandidateCount:       0,
+		MaxOutputTokens: 8192, //nolint:mnd // Currently hardcoded
+		// StopSequences:        []string{},
+		// ResponseLogprobs:     false,
+		// Logprobs:             new(int32),
+		// PresencePenalty:      new(float32),
+		// FrequencyPenalty:     new(float32),
+		// Seed:                 new(int32),
+		ResponseMIMEType: "application/json",
+		ResponseSchema:   a.getResponseSchema(profileSettings.ExtractedProperties),
+		// RoutingConfig:        &genai.GenerationConfigRoutingConfig{},
+		// ModelSelectionConfig: &genai.ModelSelectionConfig{},
+		// SafetySettings:       []*genai.SafetySetting{},
+		// Tools:                []*genai.Tool{},
+		// ToolConfig:           &genai.ToolConfig{},
+		// Labels:               map[string]string{},
+		// CachedContent:        "",
+		// ResponseModalities:   []string{},
+		// MediaResolution:      "",
+		// SpeechConfig:         &genai.SpeechConfig{},
+		// AudioTimestamp:       false,
+		ThinkingConfig: &genai.ThinkingConfig{
+			ThinkingBudget: lo.ToPtr(int32(0)),
+		},
 	}
 
 	// Generate content
-	resp, err := model.GenerateContent(ctx, genai.Text(postInputObjectJSON))
+	resp, err := a.client.Models.GenerateContent(
+		ctx,
+		a.settings.Model,
+		genai.Text(string(postInputObjectJSON)),
+		cfg,
+	)
 	if err != nil {
 		return models.Detection{}, fmt.Errorf("generate content: %w", err)
 	}
@@ -99,16 +125,13 @@ func (a *Gemini) Analyze(
 		return models.Detection{}, errors.New("no content generated")
 	}
 
-	outputMessage, ok := resp.Candidates[0].Content.Parts[0].(genai.Text)
-	if !ok {
-		return models.Detection{}, errors.New("invalid response format")
-	}
+	outputMessage := resp.Candidates[0].Content.Parts[0].Text
 
 	// Parse response
 	var output searchResult
 	err = json.Unmarshal([]byte(outputMessage), &output)
 	if err != nil {
-		logger.Error().Str("output_message", string(outputMessage)).Err(err).Msg("failed to parse Google response")
+		logger.Error().Str("output_message", outputMessage).Err(err).Msg("failed to parse Google response")
 
 		return models.Detection{}, fmt.Errorf("failed to parse Google response: %w", err)
 	}
@@ -136,7 +159,7 @@ func (a *Gemini) getResponseSchema(extractedProperties map[string]string) *genai
 	for property, definition := range extractedProperties {
 		extractedPropertiesSchema[property] = &genai.Schema{
 			Type:        genai.TypeString,
-			Nullable:    true,
+			Nullable:    lo.ToPtr(true),
 			Description: definition,
 		}
 	}

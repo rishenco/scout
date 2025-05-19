@@ -7,6 +7,18 @@ type AnalysisTask struct {
 	//
 	// Example: 123
 	ID int64 `json:"id"`
+
+	// Parameters is a set of parameters for the task
+	Parameters AnalysisParameters `json:"parameters"`
+
+	// Previous processing errors
+	Errors []string `json:"errors"`
+
+	// CreatedAt is a timestamp of task creation
+	CreatedAt time.Time `json:"created_at"`
+}
+
+type AnalysisParameters struct {
 	// SourceID is source post ID
 	//
 	// Example: reddit post id
@@ -19,6 +31,4 @@ type AnalysisTask struct {
 	Source string `json:"source"`
 	// ShouldSave is a flag that indicates if the results of analysis should be saved
 	ShouldSave bool `json:"should_save"`
-	// CreatedAt is a timestamp of task creation
-	CreatedAt time.Time `json:"created_at"`
 }

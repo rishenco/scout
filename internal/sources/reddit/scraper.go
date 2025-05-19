@@ -85,7 +85,6 @@ func (s *Scraper) Start(ctx context.Context) error {
 	}
 }
 
-//nolint:funlen // TODO: refactor
 func (s *Scraper) scrape(ctx context.Context, paginator *paginator) error {
 	if err := s.syncSubreddits(ctx, paginator); err != nil {
 		return fmt.Errorf("sync subreddits: %w", err)
@@ -107,11 +106,6 @@ func (s *Scraper) scrape(ctx context.Context, paginator *paginator) error {
 	if subreddit == "" {
 		return errors.New("no subreddit to scrape")
 	}
-
-	s.logger.Info().
-		Str("subreddit", subreddit).
-		Str("next_page", paginator.subreddits[subreddit].next).
-		Msg("scraping subreddit")
 
 	// loading the next page of the subreddit
 
@@ -186,17 +180,8 @@ func (s *Scraper) scrape(ctx context.Context, paginator *paginator) error {
 		availableAt: time.Now(),
 	}
 
-	if len(notPresentPosts) > 0 {
-		s.logger.Info().
-			Str("subreddit", subreddit).
-			Str("next_page", nextPage).
-			Int("new_posts", len(notPresentPosts)).
-			Msg("added new posts")
-	} else {
-		s.logger.Info().
-			Str("subreddit", subreddit).
-			Str("next_page", nextPage).
-			Msg("no new posts")
+	for _, post := range notPresentPosts {
+		s.logger.Info().Str("post_id", post.ID).Msg("scraped post")
 	}
 
 	return nil

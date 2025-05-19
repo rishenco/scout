@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/rs/zerolog"
+	"github.com/samber/lo"
 
 	"github.com/rishenco/scout/pkg/models"
 )
@@ -191,7 +192,13 @@ func (s *Scout) ListDetections(ctx context.Context, query models.DetectionQuery)
 // 3. Add remaining posts to the task queue
 //
 // Usage example: start this process after adding new subreddits / creating a new profile.
-func (s *Scout) JumpstartProfile(ctx context.Context, profileID int64, jumpstartPeriod *int, limit *int) error {
+func (s *Scout) JumpstartProfile(
+	ctx context.Context,
+	profileID int64,
+	excludeAlreadyAnalyzed bool,
+	jumpstartPeriod *int,
+	limit *int,
+) error {
 	sourceToIDs := make(map[string][]string)
 
 	for source, toolkit := range s.toolkits {
@@ -206,27 +213,32 @@ func (s *Scout) JumpstartProfile(ctx context.Context, profileID int64, jumpstart
 	var analysisTasks []models.AnalysisTask
 
 	for source, sourceIDs := range sourceToIDs {
-		presentSourceIDs, err := s.storage.GetPresentDetectionsForProfile(ctx, profileID, source, sourceIDs)
-		if err != nil {
-			return fmt.Errorf("get present detections (source=%s): %w", source, err)
-		}
+		if excludeAlreadyAnalyzed {
+			presentSourceIDs, err := s.storage.GetPresentDetectionsForProfile(ctx, profileID, source, sourceIDs)
+			if err != nil {
+				return fmt.Errorf("get present detections (source=%s): %w", source, err)
+			}
 
-		presentSourceIDsSet := make(map[string]struct{})
-		for _, id := range presentSourceIDs {
-			presentSourceIDsSet[id] = struct{}{}
+			presentSourceIDsSet := make(map[string]struct{})
+			for _, id := range presentSourceIDs {
+				presentSourceIDsSet[id] = struct{}{}
+			}
+
+			sourceIDs = lo.Filter(sourceIDs, func(id string, _ int) bool {
+				_, ok := presentSourceIDsSet[id]
+
+				return !ok
+			})
 		}
 
 		for _, sourceID := range sourceIDs {
-			if _, ok := presentSourceIDsSet[sourceID]; ok {
-				// skipping already present detections
-				continue
-			}
-
 			analysisTasks = append(analysisTasks, models.AnalysisTask{
-				Source:     source,
-				SourceID:   sourceID,
-				ProfileID:  profileID,
-				ShouldSave: true,
+				Parameters: models.AnalysisParameters{
+					Source:     source,
+					SourceID:   sourceID,
+					ProfileID:  profileID,
+					ShouldSave: true,
+				},
 			})
 		}
 	}
@@ -234,6 +246,11 @@ func (s *Scout) JumpstartProfile(ctx context.Context, profileID int64, jumpstart
 	if err := s.taskAdder.Add(ctx, analysisTasks); err != nil {
 		return fmt.Errorf("add analysis tasks: %w", err)
 	}
+
+	s.logger.Info().
+		Int64("profile_id", profileID).
+		Int("tasks_count", len(analysisTasks)).
+		Msg("scheduled tasks for profile jumpstart")
 
 	return nil
 }

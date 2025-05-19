@@ -484,6 +484,7 @@ func (s *Storage) GetScheduledPostIDsFromSubreddits(
 		Select("post_id").
 		From("reddit.posts").
 		Where(sq.Eq{"lower((post_json->>'subreddit')::text)": subreddits}).
+		Where(sq.Eq{"is_scheduled": true}).
 		OrderBy("post_created_at")
 
 	if days != nil {

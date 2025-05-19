@@ -2,6 +2,7 @@ package scout
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -13,6 +14,9 @@ import (
 
 type taskQueue interface {
 	Claim(ctx context.Context) (task models.AnalysisTask, anyTask bool, err error)
+	Unclaim(ctx context.Context, taskID int64) error
+	AddError(ctx context.Context, taskID int64, err string) error
+	Fail(ctx context.Context, taskID int64) error
 	Commit(ctx context.Context, taskID int64) error
 }
 
@@ -33,6 +37,7 @@ type TaskProcessor struct {
 	timeout        time.Duration
 	errorTimeout   time.Duration
 	noTasksTimeout time.Duration
+	maxAttempts    int
 	workers        int
 	logger         zerolog.Logger
 }
@@ -43,6 +48,7 @@ func NewTaskProcessor(
 	timeout time.Duration,
 	errorTimeout time.Duration,
 	noTasksTimeout time.Duration,
+	maxAttempts int,
 	workers int,
 	logger zerolog.Logger,
 ) *TaskProcessor {
@@ -52,6 +58,7 @@ func NewTaskProcessor(
 		timeout:        timeout,
 		errorTimeout:   errorTimeout,
 		noTasksTimeout: noTasksTimeout,
+		maxAttempts:    maxAttempts,
 		workers:        workers,
 		logger:         logger,
 	}
@@ -114,43 +121,65 @@ func (p *TaskProcessor) processTask(ctx context.Context) (anyTask bool, err erro
 	}
 
 	if !anyTask {
-		p.logger.Info().
-			Msg("no tasks to process")
-
 		return false, nil
 	}
 
 	p.logger.Info().
 		Int64("task_id", task.ID).
-		Int64("profile_id", task.ProfileID).
-		Str("source", task.Source).
-		Str("source_id", task.SourceID).
-		Msg("processing task")
+		Msg("claimed task")
 
-	profile, found, err := p.scout.GetProfile(ctx, task.ProfileID)
+	if len(task.Errors) >= p.maxAttempts {
+		p.logger.Error().
+			Int64("task_id", task.ID).
+			Msg("task failed max attempts")
+
+		if err := p.taskQueue.Fail(ctx, task.ID); err != nil {
+			return false, fmt.Errorf("fail task: %w", err)
+		}
+
+		return false, nil
+	}
+
+	defer func() {
+		if err != nil {
+			if addErrorErr := p.taskQueue.AddError(ctx, task.ID, err.Error()); addErrorErr != nil {
+				p.logger.Error().
+					Err(addErrorErr).
+					Msg("failed to add error to task")
+
+				err = errors.Join(err, fmt.Errorf("add error to task: %w", addErrorErr))
+			}
+		}
+
+		if unclaimErr := p.taskQueue.Unclaim(ctx, task.ID); unclaimErr != nil {
+			p.logger.Error().
+				Err(unclaimErr).
+				Msg("failed to unclaim task")
+
+			err = errors.Join(err, fmt.Errorf("unclaim task: %w", unclaimErr))
+		}
+	}()
+
+	profile, found, err := p.scout.GetProfile(ctx, task.Parameters.ProfileID)
 	if err != nil {
 		return false, fmt.Errorf("get profile: %w", err)
 	}
 
 	if !found {
 		p.logger.Error().
-			Int64("profile_id", task.ProfileID).
+			Int64("profile_id", task.Parameters.ProfileID).
 			Msg("profile not found")
 
-		if err := p.taskQueue.Commit(ctx, task.ID); err != nil {
-			return false, fmt.Errorf("commit analysis task: %w", err)
-		}
-
-		return false, nil
+		return false, fmt.Errorf("profile not found: profile id = %d", task.Parameters.ProfileID)
 	}
 
-	profileSettings, found := profile.SourcesSettings[task.Source]
+	profileSettings, found := profile.SourcesSettings[task.Parameters.Source]
 	if !found {
 		if profile.DefaultSettings == nil {
 			err := fmt.Errorf(
 				"profile settings not found: source = %s, profile id = %d",
-				task.Source,
-				task.ProfileID,
+				task.Parameters.Source,
+				task.Parameters.ProfileID,
 			)
 
 			return false, err
@@ -159,7 +188,13 @@ func (p *TaskProcessor) processTask(ctx context.Context) (anyTask bool, err erro
 		profileSettings = *profile.DefaultSettings
 	}
 
-	_, err = p.scout.Analyze(ctx, task.Source, task.SourceID, profileSettings, task.ShouldSave)
+	_, err = p.scout.Analyze(
+		ctx,
+		task.Parameters.Source,
+		task.Parameters.SourceID,
+		profileSettings,
+		task.Parameters.ShouldSave,
+	)
 	if err != nil {
 		return false, fmt.Errorf("analyze post: %w", err)
 	}
@@ -167,6 +202,10 @@ func (p *TaskProcessor) processTask(ctx context.Context) (anyTask bool, err erro
 	if err := p.taskQueue.Commit(ctx, task.ID); err != nil {
 		return false, fmt.Errorf("commit analysis task: %w", err)
 	}
+
+	p.logger.Info().
+		Int64("task_id", task.ID).
+		Msg("committed task")
 
 	return anyTask, nil
 }
