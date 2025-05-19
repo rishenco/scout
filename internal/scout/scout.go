@@ -106,10 +106,12 @@ func (s *Scout) Analyze(
 	return detection, nil
 }
 
+// ScheduleAnalysis adds tasks to the task queue.
 func (s *Scout) ScheduleAnalysis(ctx context.Context, tasks []models.AnalysisTask) error {
 	return s.taskAdder.Add(ctx, tasks)
 }
 
+// DeleteProfile deletes a given profile from the scout's storage and notifies all sources that the profile has been deleted.
 func (s *Scout) DeleteProfile(ctx context.Context, id int64) error {
 	if err := s.storage.DeleteProfileByID(ctx, id); err != nil {
 		return fmt.Errorf("delete profile from storage: %w", err)
@@ -124,22 +126,27 @@ func (s *Scout) DeleteProfile(ctx context.Context, id int64) error {
 	return nil
 }
 
+// GetAllProfiles returns all profiles from the scout's storage.
 func (s *Scout) GetAllProfiles(ctx context.Context) ([]models.Profile, error) {
 	return s.storage.GetAllProfiles(ctx)
 }
 
+// GetProfile returns a profile from the scout's storage by its ID.
 func (s *Scout) GetProfile(ctx context.Context, id int64) (profile models.Profile, found bool, err error) {
 	return s.storage.GetProfile(ctx, id)
 }
 
+// CreateProfile creates a new profile in the scout's storage.
 func (s *Scout) CreateProfile(ctx context.Context, profile models.Profile) (id int64, err error) {
 	return s.storage.CreateProfile(ctx, profile)
 }
 
+// UpdateProfile partially updates a profile in the scout's storage.
 func (s *Scout) UpdateProfile(ctx context.Context, update models.ProfileUpdate) error {
 	return s.storage.UpdateProfile(ctx, update)
 }
 
+// UpdateTags updates the tags for a given detection.
 func (s *Scout) UpdateTags(
 	ctx context.Context,
 	detectionID int64,
@@ -148,10 +155,12 @@ func (s *Scout) UpdateTags(
 	return s.storage.UpdateTags(ctx, detectionID, update)
 }
 
+// GetDetectionTags returns the tags for a given detection.
 func (s *Scout) GetDetectionTags(ctx context.Context, detectionIDs []int64) ([]models.DetectionTags, error) {
 	return s.storage.GetDetectionTags(ctx, detectionIDs)
 }
 
+// GetSourcePosts returns the posts for a given source and source IDs.
 func (s *Scout) GetSourcePosts(ctx context.Context, source string, sourceIDs []string) ([]models.SourcePost, error) {
 	toolkit, ok := s.toolkits[source]
 	if !ok {
@@ -166,10 +175,22 @@ func (s *Scout) GetSourcePosts(ctx context.Context, source string, sourceIDs []s
 	return posts, nil
 }
 
+// ListDetections returns a list of detections from the scout's storage.
 func (s *Scout) ListDetections(ctx context.Context, query models.DetectionQuery) ([]models.DetectionRecord, error) {
 	return s.storage.ListDetections(ctx, query)
 }
 
+// JumpstartProfile schedules a jumpstart analysis for a given profile.
+//
+// Jumpstart Algorithm:
+//
+// 1. Load all previously scheduled post ids from all sources (within period/limit constraints)
+//
+// 2. Filter out posts that have already been analyzed with the given profile
+//
+// 3. Add remaining posts to the task queue
+//
+// Usage example: start this process after adding new subreddits / creating a new profile.
 func (s *Scout) JumpstartProfile(ctx context.Context, profileID int64, jumpstartPeriod *int, limit *int) error {
 	sourceToIDs := make(map[string][]string)
 

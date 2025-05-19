@@ -1,4 +1,4 @@
-package ai
+package analyzers
 
 type searchResult struct {
 	IsRelevant bool              `json:"is_relevant"`

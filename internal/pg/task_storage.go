@@ -68,7 +68,7 @@ func (s *TaskStorage) Claim(ctx context.Context) (task models.AnalysisTask, anyT
 	query := `
 		UPDATE scout.analysis_tasks
 		SET is_claimed = true, claimed_at = NOW()
-		WHERE id = (
+		WHERE id IN (
 			SELECT id
 			FROM scout.analysis_tasks
 			WHERE is_claimed = false AND is_committed = false
@@ -95,7 +95,7 @@ func (s *TaskStorage) Claim(ctx context.Context) (task models.AnalysisTask, anyT
 func (s *TaskStorage) Commit(ctx context.Context, taskID int64) error {
 	query := `
 		UPDATE scout.analysis_tasks
-		SET is_committed = true, committed_at = now()
+		SET is_committed = true, committed_at = NOW()
 		WHERE id = $1
 	`
 
@@ -110,8 +110,8 @@ func (s *TaskStorage) Commit(ctx context.Context, taskID int64) error {
 func (s *TaskStorage) UnclaimOldTasks(ctx context.Context, timeout time.Duration) error {
 	query := `
 		UPDATE scout.analysis_tasks
-		SET is_claimed = false, claimed_at = null
-		WHERE is_claimed AND not is_committed AND claimed_at < now() - $1 * interval '1 second'
+		SET is_claimed = false, claimed_at = NULL
+		WHERE is_claimed AND NOT is_committed AND claimed_at < NOW() - $1 * interval '1 second'
 	`
 
 	_, err := s.pool.Exec(ctx, query, timeout.Seconds())

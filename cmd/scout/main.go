@@ -22,7 +22,7 @@ import (
 	"github.com/rishenco/scout/internal/scout"
 	"github.com/rishenco/scout/internal/sources"
 	"github.com/rishenco/scout/internal/sources/reddit"
-	redditai "github.com/rishenco/scout/internal/sources/reddit/ai"
+	redditanalyzers "github.com/rishenco/scout/internal/sources/reddit/analyzers"
 	redditclient "github.com/rishenco/scout/internal/sources/reddit/client"
 	redditpg "github.com/rishenco/scout/internal/sources/reddit/pg"
 	"github.com/rishenco/scout/internal/tools"
@@ -66,10 +66,10 @@ func main() {
 	requestsStorage := pg.NewRequestsStorage(postgresPool, componentLogger(logger, "requests_storage"))
 	redditStorage := redditpg.NewStorage(postgresPool, componentLogger(logger, "reddit_storage"))
 
-	redditGeminiAI, err := redditai.NewGemini(
+	redditGeminiAI, err := redditanalyzers.NewGemini(
 		ctx,
 		credentialsConfig.GeminiAPIKey,
-		redditai.GeminiSettings{
+		redditanalyzers.GeminiSettings{
 			Model:       settingsConfig.Google.Model,
 			Temperature: settingsConfig.Google.Temperature,
 		},

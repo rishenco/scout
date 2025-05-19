@@ -70,7 +70,7 @@ func (s *Scraper) Start(ctx context.Context) error {
 
 		timeout := s.timeout
 
-		if err := s.poll(ctx, paginator); err != nil {
+		if err := s.scrape(ctx, paginator); err != nil {
 			s.logger.Error().Err(err).Msg("error updating subreddits")
 
 			timeout = s.errorTimeout
@@ -86,12 +86,12 @@ func (s *Scraper) Start(ctx context.Context) error {
 }
 
 //nolint:funlen // TODO: refactor
-func (s *Scraper) poll(ctx context.Context, paginator *paginator) error {
+func (s *Scraper) scrape(ctx context.Context, paginator *paginator) error {
 	if err := s.syncSubreddits(ctx, paginator); err != nil {
 		return fmt.Errorf("sync subreddits: %w", err)
 	}
 
-	// select subreddit
+	// looking for the first subreddit that can be scraped
 	var subreddit string
 
 	for subredditCandidate, pagination := range paginator.subreddits {
@@ -105,13 +105,15 @@ func (s *Scraper) poll(ctx context.Context, paginator *paginator) error {
 	}
 
 	if subreddit == "" {
-		return errors.New("no subreddit to poll")
+		return errors.New("no subreddit to scrape")
 	}
 
 	s.logger.Info().
 		Str("subreddit", subreddit).
 		Str("next_page", paginator.subreddits[subreddit].next).
-		Msg("polling subreddit")
+		Msg("scraping subreddit")
+
+	// loading the next page of the subreddit
 
 	redditPosts, nextPage, err := s.reddit.GetPosts(
 		ctx,
@@ -124,7 +126,7 @@ func (s *Scraper) poll(ctx context.Context, paginator *paginator) error {
 	}
 
 	if len(redditPosts) == 0 {
-		// no posts, meaning we've reached the end of the subreddit
+		// no posts, meaning we've reached the end of the subreddit (at least the end of posts available from API)
 		s.logger.Info().
 			Str("subreddit", subreddit).
 			Msg("no posts, meaning we've exhausted the subreddit")
@@ -155,7 +157,7 @@ func (s *Scraper) poll(ctx context.Context, paginator *paginator) error {
 	})
 
 	if len(notPresentPosts) == 0 {
-		// we've reached the page we've processed
+		// we've reached the page we've processed => we can stop
 
 		_, fullyScanned := paginator.alreadyFullyScanned[subreddit]
 
@@ -171,10 +173,12 @@ func (s *Scraper) poll(ctx context.Context, paginator *paginator) error {
 
 			return nil
 		}
+
+		// if at least one exhausting scan is required we have to continue scraping
 	}
 
-	if insertErr := s.storage.InsertPosts(ctx, notPresentPosts); insertErr != nil {
-		return fmt.Errorf("insert: %w", insertErr)
+	if err := s.storage.InsertPosts(ctx, notPresentPosts); err != nil {
+		return fmt.Errorf("insert: %w", err)
 	}
 
 	paginator.subreddits[subreddit] = subredditPagination{
@@ -198,6 +202,8 @@ func (s *Scraper) poll(ctx context.Context, paginator *paginator) error {
 	return nil
 }
 
+// syncSubreddits loads all required subreddits from the storage, adds present subreddits
+// and removes not present subreddits.
 func (s *Scraper) syncSubreddits(ctx context.Context, p *paginator) error {
 	subreddits, err := s.storage.GetSubredditsForScraping(ctx)
 	if err != nil {
@@ -238,12 +244,14 @@ func newPaginator() *paginator {
 }
 
 type paginator struct {
-	subreddits          map[string]subredditPagination
+	subreddits map[string]subredditPagination
+	// needed to ensure at least one exhausting scan
 	alreadyFullyScanned map[string]struct{}
 }
 
 type subredditPagination struct {
+	// reddit's pagination token
 	next string
-	// for cooldown
+	// time when the next page can be scraped
 	availableAt time.Time
 }

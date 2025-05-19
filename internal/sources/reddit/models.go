@@ -19,6 +19,9 @@ type SubredditSettings struct {
 	Subreddit string  `json:"subreddit"`
 }
 
+// All models below are almost exact copies of the original models from the reddit library.
+// We need them to avoid troubles with the json marshalling/unmarshalling.
+
 type PostAndComments struct {
 	Post     Post      `json:"post"`
 	Comments []Comment `json:"comments"`
@@ -134,8 +137,8 @@ func PostFromLib(post *reddit.Post) Post {
 	rp := Post{
 		ID:     post.ID,
 		FullID: post.FullID,
-		// Created:               &post.Created,
-		// Edited:                &post.Edited,
+		// Created:               &post.Created.Time,
+		// Edited:                &post.Edited.Time,
 		Permalink:             post.Permalink,
 		URL:                   post.URL,
 		Title:                 post.Title,
@@ -173,8 +176,8 @@ func CommentFromLib(comment *reddit.Comment) Comment {
 	rc := Comment{
 		ID:     comment.ID,
 		FullID: comment.FullID,
-		// Created:               &time.Time{},
-		// Edited:                &time.Time{},
+		// Created:               &comment.Created.Time,
+		// Edited:                &comment.Edited.Time,
 		ParentID:              comment.ParentID,
 		Permalink:             comment.Permalink,
 		Body:                  comment.Body,

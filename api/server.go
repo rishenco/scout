@@ -390,8 +390,7 @@ func (s *Server) PostApiProfilesIdJumpstart(
 	ctx context.Context,
 	request oapi.PostApiProfilesIdJumpstartRequestObject,
 ) (oapi.PostApiProfilesIdJumpstartResponseObject, error) {
-	var jumpstartDays *int
-	var jumpstartLimit *int
+	var jumpstartDays, jumpstartLimit *int
 
 	if request.Body.JumpstartPeriod != nil {
 		jumpstartDays = request.Body.JumpstartPeriod
@@ -426,6 +425,7 @@ func profileFromModel(profile models.Profile) oapi.Profile {
 	for source, settings := range profile.SourcesSettings {
 		(*oapiProfile.SourcesSettings)[source] = profileSettingsFromModel(settings)
 	}
+
 	return oapiProfile
 }
 

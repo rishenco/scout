@@ -1,5 +1,8 @@
 package nullable
 
+// Nullable is a wrapper around a value that can be either set, unset, or null.
+//
+// This is useful for cases when you need to implement partial updates of data that has nullable fields.
 type Nullable[T any] struct {
 	Value *T
 	Set   bool

@@ -10,7 +10,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// SettingsConfig holds application configuration.
+// SettingsConfig represents application's parametrization provided in a JSON/YAML file.
 type SettingsConfig struct {
 	Google struct {
 		Model       string  `json:"model" yaml:"model"`

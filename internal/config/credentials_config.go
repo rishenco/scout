@@ -6,6 +6,7 @@ import (
 	"github.com/kelseyhightower/envconfig"
 )
 
+// CredentialsConfig holds application secrets stored in environment variables.
 type CredentialsConfig struct {
 	GeminiAPIKey string `envconfig:"GEMINI_API_KEY"`
 

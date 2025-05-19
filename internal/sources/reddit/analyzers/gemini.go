@@ -1,4 +1,4 @@
-package ai
+package analyzers
 
 import (
 	"context"

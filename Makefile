@@ -47,3 +47,7 @@ up-db:
 .PHONY: down-db
 down-db:
 	docker compose down postgres
+
+.PHONY: lint
+lint:
+	golangci-lint run ./...
