@@ -1,5 +1,5 @@
 import { useProfiles } from '@/api/hooks'
-import { ProfileList } from '@/components/ProfileList'
+import { ProfileList } from '@/components/profiles/ProfileList'
 import { Button } from '@/components/ui/button'
 import { Link } from 'react-router-dom'
 import { PlusCircle } from 'lucide-react'

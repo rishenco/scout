@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useInView } from 'react-intersection-observer'
-import { DetectionFilter as DetectionFilterComponent} from '@/components/DetectionFilter'
-import { DetectionCard } from '@/components/DetectionCard'
+import { DetectionFilter as DetectionFilterComponent} from '@/components/detections/DetectionFilter'
+import { DetectionCard } from '@/components/detections/DetectionCard'
 import { useInfiniteDetections } from '@/api/hooks'
 import type { DetectionFilter, ListedDetection } from '@/api/models'
-import { RedditDetectionDialog } from '@/components/RedditDetectionDialog'
+import { RedditDetectionDialog } from '@/components/detections/RedditDetectionDialog'
 
 interface DetectionListProps {
   profileId: number

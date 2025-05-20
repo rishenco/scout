@@ -4,7 +4,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import type { ListedDetection } from '@/api/models'
-import { RedditDetectionCard } from '@/components/RedditDetectionCard'
+import { RedditDetectionCard } from '@/components/detections/RedditDetectionCard'
 
 interface RedditDetectionDialogProps {
   listedDetection: ListedDetection

@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PromptInput } from "@/components/PromptInput";
-import { PropertiesEditor } from "@/components/PropertiesEditor";
-import { SubredditSelector } from "@/components/SubredditSelector";
+import { PromptInput } from "@/components/profiles/PromptInput";
+import { PropertiesEditor } from "@/components/profiles/PropertiesEditor";
+import { SubredditSelector } from "@/components/profiles/SubredditSelector";
 import type { Profile, ProfileUpdate } from "@/api/models";
 import { useSubredditsForProfile } from "@/api/hooks";
 

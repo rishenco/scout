@@ -1,9 +1,9 @@
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { ArrowUpIcon, MessageSquareIcon, ExternalLinkIcon } from 'lucide-react'
 import type { ListedDetection, RedditPostAndComments } from '@/api/models'
-import { ExtractedProperties } from '@/components/ExtractedProperties'
-import { RelevancyBadge } from '@/components/RelevancyBadge'
-import { DetectionReaction } from '@/components/DetectionReaction'
+import { ExtractedProperties } from '@/components/detections/ExtractedProperties'
+import { RelevancyBadge } from '@/components/detections/RelevancyBadge'
+import { DetectionReaction } from '@/components/detections/DetectionReaction'
 
 interface RedditDetectionCardProps {
   listedDetection: ListedDetection

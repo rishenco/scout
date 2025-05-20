@@ -2,17 +2,17 @@ import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PlaygroundStats } from "@/components/playground/PlaygroundStats";
+import { PlaygroundStats } from "@/components/profiles/playground/PlaygroundStats";
 import type { AnalyzeRequest, ProfileSettingsUpdate, ListedDetection } from "@/api/models";
 import { useAnalyzePost, useInfiniteDetections } from "@/api/hooks";
 import { Loader2 } from "lucide-react";
-import {type BenchmarkStats, isPostCorrect, type PlaygroundPost} from "@/components/playground/models";
+import {type BenchmarkStats, isPostCorrect, type PlaygroundPost} from "@/components/profiles/playground/models";
 import { DataTable } from "./data-table";
 import { columns as createColumns } from "./columns";
 import type { RowSelectionState } from "@tanstack/react-table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { RedditDetectionDialog } from "@/components/RedditDetectionDialog";
+import { RedditDetectionDialog } from "@/components/detections/RedditDetectionDialog";
 import { toast } from "sonner";
 
 interface PlaygroundPostListProps {

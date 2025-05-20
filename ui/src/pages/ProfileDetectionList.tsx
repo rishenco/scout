@@ -1,7 +1,7 @@
 import { useParams, Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, Settings } from 'lucide-react'
-import { DetectionList } from '@/components/DetectionList'
+import { DetectionList } from '@/components/detections/DetectionList'
 import { useProfile, useSubredditsForProfile } from '@/api/hooks'
 
 export default function ProfileDetectionList() {

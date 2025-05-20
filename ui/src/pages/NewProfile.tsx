@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
-import { ProfileEditor } from '@/components/ProfileEditor';
+import { ProfileEditor } from '@/components/profiles/ProfileEditor';
 import { useAddProfilesToSubreddit, useCreateProfile } from '@/api/hooks';
 import type { Profile, ProfileUpdate } from '@/api/models';
 

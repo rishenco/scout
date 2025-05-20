@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PromptInput } from "@/components/PromptInput";
+import { PromptInput } from "@/components/profiles/PromptInput";
 import { X, Plus } from "lucide-react";
 
 type PropertiesEditorProps = {

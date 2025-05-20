@@ -1,7 +1,7 @@
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import type { ListedDetection } from '@/api/models'
-import { RedditDetectionCard } from './RedditDetectionCard'
+import { RedditDetectionCard } from '@/components/detections/RedditDetectionCard'
 
 interface DetectionCardProps {
   listedDetection?: ListedDetection

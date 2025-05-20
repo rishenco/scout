@@ -1,8 +1,8 @@
 import { useParams, Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft } from 'lucide-react'
-import { ProfileEditor } from '@/components/ProfileEditor'
-import { PlaygroundPostList } from '@/components/playground/PlaygroundPostList'
+import { ProfileEditor } from '@/components/profiles/ProfileEditor'
+import { PlaygroundPostList } from '@/components/profiles/playground/PlaygroundPostList'
 import { 
   useProfile, 
   useUpdateProfile,
