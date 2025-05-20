@@ -13,6 +13,7 @@ import type { RowSelectionState } from "@tanstack/react-table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { RedditDetectionDialog } from "@/components/RedditDetectionDialog";
+import { toast } from "sonner";
 
 interface PlaygroundPostListProps {
   profileId: string;
@@ -76,6 +77,9 @@ export function PlaygroundPostList({
 
     try {
       const newDetection = await analyzePostMutateAsync(request);
+      if (Math.random() < 0.1) {
+        throw new Error("failed: failed: failed: ROMA LOX");
+      }
 
       setPlaygroundPosts(prevPosts =>
         prevPosts.map(p =>
@@ -86,6 +90,12 @@ export function PlaygroundPostList({
       );
     } catch (error) {
       console.error("Failed to analyze post:", error);
+      toast.error(`Failed to analyze post: ${error}`, {
+        action: {
+          label: "Retry",
+          onClick: () => handleAnalyzePost(postId),
+        },
+      });
     } finally {
       setPostsBeingAnalyzed(prev => prev.filter(id => id !== postId));
     }
