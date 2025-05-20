@@ -12,7 +12,7 @@ import { columns as createColumns } from "./columns";
 import type { RowSelectionState } from "@tanstack/react-table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { RedditDetectionDialog } from "@/components/detections/RedditDetectionDialog";
+import { DetectionDialog } from "@/components/detections/DetectionDialog";
 import { toast } from "sonner";
 
 interface PlaygroundPostListProps {
@@ -380,7 +380,7 @@ export function PlaygroundPostList({
       )}
 
       {selectedDetection && (
-        <RedditDetectionDialog
+        <DetectionDialog
           listedDetection={selectedDetection}
           open={isDialogOpen}
           onOpenChange={setIsDialogOpen}

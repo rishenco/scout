@@ -4,7 +4,7 @@ import { DetectionFilter as DetectionFilterComponent} from '@/components/detecti
 import { DetectionCard } from '@/components/detections/DetectionCard'
 import { useInfiniteDetections } from '@/api/hooks'
 import type { DetectionFilter, ListedDetection } from '@/api/models'
-import { RedditDetectionDialog } from '@/components/detections/RedditDetectionDialog'
+import { DetectionDialog } from '@/components/detections/DetectionDialog'
 
 interface DetectionListProps {
   profileId: number
@@ -78,6 +78,7 @@ export function DetectionList({ profileId }: DetectionListProps) {
             key={detection.detection.id} // Use detection ID as key
             listedDetection={detection}
             onCardClick={() => handleCardClick(detection)}
+            compact={true}
           />
         ))}
         
@@ -106,7 +107,7 @@ export function DetectionList({ profileId }: DetectionListProps) {
       </div>
 
       {selectedDetection && (
-        <RedditDetectionDialog
+        <DetectionDialog
           listedDetection={selectedDetection}
           open={isDialogOpen}
           onOpenChange={setIsDialogOpen}

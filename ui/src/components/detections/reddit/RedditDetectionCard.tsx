@@ -8,22 +8,20 @@ import { DetectionReaction } from '@/components/detections/DetectionReaction'
 interface RedditDetectionCardProps {
   listedDetection: ListedDetection
   onCardClick?: () => void
-  truncateContent?: boolean
-  disableBorder?: boolean
+  compact?: boolean
 }
 
 export function RedditDetectionCard({ 
   listedDetection, 
   onCardClick,
-  truncateContent = false,
-  disableBorder = false
+  compact,
 }: RedditDetectionCardProps) {
   const redditPost = listedDetection.source_post as RedditPostAndComments
 
   return (
     <>
       <Card 
-        className={`w-full ${onCardClick ? 'cursor-pointer hover:bg-muted/50 transition-colors' : ''} ${disableBorder ? 'border-none' : 'mb-4'}`} 
+        className={`w-full ${onCardClick ? 'cursor-pointer hover:bg-muted/50 transition-colors' : ''} ${compact ? 'border-none' : 'mb-4'}`} 
         onClick={onCardClick}
       >
         <CardHeader className="pt-3 pb-2 px-4 relative">
@@ -52,7 +50,7 @@ export function RedditDetectionCard({
             />
           )}
           
-          <div className={`text-sm ${truncateContent ? 'whitespace-pre-wrap' : 'line-clamp-2'} text-muted-foreground`}>
+          <div className={`text-sm ${compact ? 'line-clamp-2' : 'whitespace-pre-wrap'} text-muted-foreground`}>
             {redditPost.post.selftext}
           </div>
         </CardContent>
