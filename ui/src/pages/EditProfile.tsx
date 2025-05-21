@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button'
 import { ArrowLeft } from 'lucide-react'
 import { ProfileEditor } from '@/components/profiles/ProfileEditor'
 import { PlaygroundPostList } from '@/components/profiles/playground/PlaygroundPostList'
+import { toast } from "sonner";
 import { 
   useProfile, 
   useCombinedUpdateProfile,
@@ -32,8 +33,11 @@ export default function EditProfile() {
     combinedUpdateProfile(
       {id: numberProfileId, update: update, newSubreddits: subreddits},
       {
+        onSuccess: () => {
+          toast.success("Profile updated successfully!");
+        },
         onError: (err: Error) => {
-          console.log(`Failed to update profile ${err.message}`)
+          toast.error(`Failed to update profile: ${err.message}`)
         },
       }
     )

@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { ProfileEditor } from '@/components/profiles/ProfileEditor';
+import { toast } from "sonner";
 import { 
   useCombinedCreateProfile, 
 } from '@/api/hooks';
@@ -38,10 +39,11 @@ export default function NewProfile() {
 
     combinedCreateProfile({profile, subreddits}, {
       onSuccess: (id: number) => {
+        toast.success("Profile created successfully!");
         navigate(`/profiles/${id}`);
       },
       onError: (err: Error) => {
-        setError(`Failed to create profile: ${err.message}`);
+        toast.error(`Failed to create profile: ${err.message}`);
       },
     });    
   };
