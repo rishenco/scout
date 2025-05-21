@@ -4,6 +4,7 @@ import type { ListedDetection, RedditPostAndComments } from '@/api/models'
 import { ExtractedProperties } from '@/components/detections/ExtractedProperties'
 import { RelevancyBadge } from '@/components/detections/RelevancyBadge'
 import { DetectionReaction } from '@/components/detections/DetectionReaction'
+import { RedditPostBody } from './RedditPostBody'
 
 interface RedditDetectionCardProps {
   listedDetection: ListedDetection
@@ -21,7 +22,7 @@ export function RedditDetectionCard({
   return (
     <>
       <Card 
-        className={`w-full ${onCardClick ? 'cursor-pointer hover:bg-muted/50 transition-colors' : ''} ${compact ? 'border-none' : 'mb-4'}`} 
+        className={`w-full ${onCardClick ? 'cursor-pointer hover:bg-muted/50 transition-colors' : ''} ${compact ? 'mb-4' : 'border-none'}`} 
         onClick={onCardClick}
       >
         <CardHeader className="pt-3 pb-2 px-4 relative">
@@ -50,9 +51,8 @@ export function RedditDetectionCard({
             />
           )}
           
-          <div className={`text-sm ${compact ? 'line-clamp-2' : 'whitespace-pre-wrap'} text-muted-foreground`}>
-            {redditPost.post.selftext}
-          </div>
+          <RedditPostBody post={redditPost.post} compact={compact} />
+
         </CardContent>
         <CardFooter className="flex justify-between py-2 px-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-4">

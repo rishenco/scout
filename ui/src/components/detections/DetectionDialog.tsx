@@ -21,7 +21,7 @@ export function DetectionDialog({ listedDetection, open, onOpenChange }: Detecti
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-0">
         <DetectionCard
           listedDetection={listedDetection}
-          compact={true}
+          compact={false}
         />
       </DialogContent>
     </Dialog>
