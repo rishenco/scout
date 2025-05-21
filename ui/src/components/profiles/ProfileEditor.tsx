@@ -7,11 +7,12 @@ import { PropertiesEditor } from "@/components/profiles/PropertiesEditor";
 import { SubredditSelector } from "@/components/profiles/SubredditSelector";
 import type { Profile, ProfileUpdate } from "@/api/models";
 import { useSubredditsForProfile } from "@/api/hooks";
+import { Skeleton } from "../ui/skeleton";
 
 type ProfileEditorProps = {
   initialProfile?: Partial<Profile>;
   onEdit?: (profile: ProfileUpdate, subreddits: string[]) => void;
-  onSubmit?: (profile: ProfileUpdate, subreddits: string[]) => void;
+  onSubmit: (profile: ProfileUpdate, subreddits: string[]) => void;
   isSubmitting?: boolean;
   className?: string;
 };
@@ -23,7 +24,7 @@ export function ProfileEditor({
   isSubmitting = false,
   className = "",
 }: ProfileEditorProps) {
-  const { data: loadedSubreddits } = useSubredditsForProfile(initialProfile?.id || -1)
+  const { data: loadedSubreddits, isLoading: isLoadingSubreddits } = useSubredditsForProfile(initialProfile?.id || -1)
   const [name, setName] = useState(initialProfile.name || "");
   const [subreddits, setSubreddits] = useState<string[]>(
     loadedSubreddits?.map((subreddit) => subreddit.subreddit) || [],
@@ -38,7 +39,7 @@ export function ProfileEditor({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    onSubmit && onSubmit({
+    onSubmit({
       name: name,
       default_settings: {
         relevancy_filter: relevancyFilterPrompt || '',
@@ -55,7 +56,9 @@ export function ProfileEditor({
         extracted_properties: propertiesPrompts || {},
       },
     };
-    onEdit && onEdit(profileUpdate, subreddits);
+    if (onEdit) {
+      onEdit(profileUpdate, subreddits);
+    }
   }, [name, relevancyFilterPrompt, propertiesPrompts, subreddits, onEdit]);
 
   return (
@@ -71,10 +74,12 @@ export function ProfileEditor({
         />
       </div>
 
-      <SubredditSelector 
-        subreddits={subreddits}
-        onChange={setSubreddits}
-      />
+      {isLoadingSubreddits ?
+        <Skeleton className="h-40" /> :
+        <SubredditSelector
+          subreddits={subreddits}
+          onChange={setSubreddits}
+        />}
 
       <PromptInput
         label="Relevancy Filter Prompt"

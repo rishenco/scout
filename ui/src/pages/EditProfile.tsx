@@ -5,8 +5,7 @@ import { ProfileEditor } from '@/components/profiles/ProfileEditor'
 import { PlaygroundPostList } from '@/components/profiles/playground/PlaygroundPostList'
 import { 
   useProfile, 
-  useUpdateProfile,
-  useAddProfilesToSubreddit
+  useCombinedUpdateProfile,
 } from '@/api/hooks'
 import type { ProfileUpdate } from '@/api/models'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -17,13 +16,12 @@ export default function EditProfile() {
   const numberProfileId = parseInt(profileId || '-1')
   
   const { data: profile, isLoading: isLoadingProfile } = useProfile(numberProfileId)
-  const { mutate: updateProfile, isPending: isUpdatingProfile } = useUpdateProfile()
-  const {mutate: addProfilesToSubreddit, isPending: isAddingProfilesToSubreddit} = useAddProfilesToSubreddit()
+  const { mutate: combinedUpdateProfile, isPending: isUpdatingProfile } = useCombinedUpdateProfile()
 
 
   const [draftUpdateData, setDraftUpdateData] = useState<ProfileUpdate | null>(null)
 
-  const handleEditProfile = useCallback((update: ProfileUpdate, _subreddits: string[]) => {
+  const handleEditProfile = useCallback((update: ProfileUpdate, _: string[]) => {
     setDraftUpdateData(update)
   }, [])
 
@@ -31,22 +29,15 @@ export default function EditProfile() {
     if (numberProfileId == 0) return
 
     // Store draft profile for testing
-    updateProfile(
-      {id: numberProfileId, update: update},
+    combinedUpdateProfile(
+      {id: numberProfileId, update: update, newSubreddits: subreddits},
       {
-        onError: (err) => {
+        onError: (err: Error) => {
           console.log(`Failed to update profile ${err.message}`)
         },
       }
     )
-
-    for (const subreddit of subreddits) {
-      addProfilesToSubreddit({
-        subreddit,
-        profileIds: [numberProfileId],
-      })
-    }
-  }, [numberProfileId, updateProfile, addProfilesToSubreddit])
+  }, [numberProfileId, combinedUpdateProfile])
 
   return (
     <div className="container py-8 max-w-7xl">
@@ -74,7 +65,7 @@ export default function EditProfile() {
               initialProfile={profile}
               onEdit={handleEditProfile}
               onSubmit={handleSaveProfile}
-              isSubmitting={isUpdatingProfile || isAddingProfilesToSubreddit}
+              isSubmitting={isUpdatingProfile}
             />
           ) : (
             <div className="p-4 bg-orange-100 dark:bg-orange-900/20 text-orange-800 dark:text-orange-400 rounded-md">

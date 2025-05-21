@@ -64,6 +64,82 @@ export function useDeleteProfile() {
   });
 }
 
+// Combines creating a profile and adding it to subreddits
+export function useCombinedCreateProfile() {
+  const queryClient = useQueryClient();
+  let profileId: number;
+  return useMutation<number, Error, { profile: Profile; subreddits: string[] }>({
+    mutationFn: async ({ profile, subreddits }) => {
+      profileId = await apiClient.profiles.createProfile(profile);
+      if (subreddits && subreddits.length > 0) {
+        await Promise.all(
+          subreddits.map(subreddit =>
+            apiClient.subreddits.addProfilesToSubreddit(subreddit, [profileId])
+          )
+        );
+      }
+      return profileId;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['profiles'] });
+      queryClient.invalidateQueries({ queryKey: ['subreddits'] });
+    },
+    onError: () => {
+      // invalidate in case of partial success
+      if (profileId) {
+        queryClient.invalidateQueries({ queryKey: ['profiles'] });
+        queryClient.invalidateQueries({ queryKey: ['subreddits'] });
+        queryClient.invalidateQueries({ queryKey: ['profiles', profileId] });
+        queryClient.invalidateQueries({ queryKey: ['subreddits', 'profile', profileId] });
+      }
+    },
+  });
+}
+
+// Combines updating a profile and its subreddit associations
+export function useCombinedUpdateProfile() {
+  const queryClient = useQueryClient();
+  return useMutation<void, Error, { id: number; update: ProfileUpdate; newSubreddits: string[] }>({
+    mutationFn: async ({ id, update, newSubreddits }) => {
+      await apiClient.profiles.updateProfile(id, update);
+
+      const currentSubredditsSettings = await apiClient.subreddits.getSubredditsForProfile(id);
+      const currentSubreddits = currentSubredditsSettings.map(s => s.subreddit);
+
+      const subredditsToAdd = newSubreddits.filter(sr => !currentSubreddits.includes(sr));
+      const subredditsToRemove = currentSubreddits.filter(sr => !newSubreddits.includes(sr));
+
+      if (subredditsToAdd.length > 0) {
+        await Promise.all(
+          subredditsToAdd.map(subreddit =>
+            apiClient.subreddits.addProfilesToSubreddit(subreddit, [id])
+          )
+        );
+      }
+
+      if (subredditsToRemove.length > 0) {
+        await Promise.all(
+          subredditsToRemove.map(subreddit =>
+            apiClient.subreddits.removeProfilesFromSubreddit(subreddit, [id])
+          )
+        );
+      }
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['profiles'] });
+      queryClient.invalidateQueries({ queryKey: ['profiles', variables.id] });
+      queryClient.invalidateQueries({ queryKey: ['subreddits'] });
+      queryClient.invalidateQueries({ queryKey: ['subreddits', 'profile', variables.id] });
+    },
+    onError: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['profiles'] });
+      queryClient.invalidateQueries({ queryKey: ['profiles', variables.id] });
+      queryClient.invalidateQueries({ queryKey: ['subreddits'] });
+      queryClient.invalidateQueries({ queryKey: ['subreddits', 'profile', variables.id] });
+    },
+  });
+}
+
 const DETECTION_PAGE_SIZE = 10;
 
 // Detections (replaces useInfiniteFeed)

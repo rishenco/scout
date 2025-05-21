@@ -3,14 +3,16 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { ProfileEditor } from '@/components/profiles/ProfileEditor';
-import { useAddProfilesToSubreddit, useCreateProfile } from '@/api/hooks';
+import { 
+  useCombinedCreateProfile, 
+} from '@/api/hooks';
 import type { Profile, ProfileUpdate } from '@/api/models';
 
 export default function NewProfile() {
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
-  const { mutate: createProfile, isPending } = useCreateProfile();
-  const { mutate: addProfilesToSubreddit } = useAddProfilesToSubreddit();
+  const { mutate: combinedCreateProfile, isPending } = useCombinedCreateProfile();
+
   const handleCreateProfile = (update: ProfileUpdate, subreddits: string[]) => {
     const profile: Profile = {
       id: 0,
@@ -34,18 +36,11 @@ export default function NewProfile() {
 
     setError(null);
 
-    createProfile(profile, {
-      onSuccess: (id) => {
+    combinedCreateProfile({profile, subreddits}, {
+      onSuccess: (id: number) => {
         navigate(`/profiles/${id}`);
-
-        for (const subreddit of subreddits) {
-          addProfilesToSubreddit({
-            subreddit,
-            profileIds: [id],
-          })
-        }
       },
-      onError: (err) => {
+      onError: (err: Error) => {
         setError(`Failed to create profile: ${err.message}`);
       },
     });    
