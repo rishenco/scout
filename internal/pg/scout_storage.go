@@ -30,7 +30,7 @@ func NewScoutStorage(pool *pgxpool.Pool, logger zerolog.Logger) *ScoutStorage {
 
 func (s *ScoutStorage) SaveDetection(ctx context.Context, record models.DetectionRecord) error {
 	query := `
-		INSERT INTO scout.detections (source, source_id, profile_id, is_relevant, properties)
+		INSERT INTO scout.detections (source, source_id, profile_id, is_relevant, version, test_mode, properties)
 		VALUES ($1, $2, $3, $4, $5)
 	`
 
@@ -41,6 +41,8 @@ func (s *ScoutStorage) SaveDetection(ctx context.Context, record models.Detectio
 		record.SourceID,
 		record.ProfileID,
 		record.IsRelevant,
+		record.Version,
+		record.TestMode,
 		record.Properties,
 	)
 	if err != nil {
@@ -55,25 +57,60 @@ func (s *ScoutStorage) GetProfile(
 	profileID int64,
 ) (profile models.Profile, found bool, err error) {
 	getProfileQuery := `
-		SELECT p.id, p.name, p.created_at, p.updated_at
+		SELECT p.id, p.name, p.selected_version, p.created_at, p.updated_at
 		FROM scout.profiles p
 		WHERE p.id = $1
 	`
 
+	getProfileVersionsQuery := `
+		SELECT
+			version,
+			test_mode,
+			created_at,
+			updated_at
+		FROM scout.profile_versions
+		WHERE profile_id = $1
+	`
+
 	getProfileSettingsQuery := `
-		SELECT ps.source, ps.profile_id, ps.relevancy_filter, ps.extracted_properties, ps.created_at, ps.updated_at
+		SELECT 
+			ps.source,
+			ps.version,
+			ps.relevancy_filter,
+			ps.extracted_properties
 		FROM scout.profile_settings ps
 		WHERE ps.profile_id = $1
 	`
 
 	profileRow := s.pool.QueryRow(ctx, getProfileQuery, profileID)
 
-	if err := profileRow.Scan(&profile.ID, &profile.Name, &profile.CreatedAt, &profile.UpdatedAt); err != nil {
+	if err := profileRow.Scan(&profile.ID, &profile.Name, &profile.SelectedVersion, &profile.CreatedAt, &profile.UpdatedAt); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return models.Profile{}, false, nil
 		}
 
 		return models.Profile{}, false, fmt.Errorf("scan: %w", err)
+	}
+
+	versionsRows, err := s.pool.Query(ctx, getProfileVersionsQuery, profileID)
+	if err != nil {
+		return models.Profile{}, false, fmt.Errorf("query: %w", err)
+	}
+
+	defer versionsRows.Close()
+
+	for versionsRows.Next() {
+		var version models.ProfileVersion
+
+		if err := versionsRows.Scan(&version.Version, &version.TestMode, &version.CreatedAt, &version.UpdatedAt); err != nil {
+			return models.Profile{}, false, fmt.Errorf("scan: %w", err)
+		}
+
+		profile.Versions = append(profile.Versions, version)
+	}
+
+	if err := versionsRows.Err(); err != nil {
+		return models.Profile{}, false, fmt.Errorf("rows: %w", err)
 	}
 
 	settingsRows, err := s.pool.Query(ctx, getProfileSettingsQuery, profileID)
@@ -87,21 +124,35 @@ func (s *ScoutStorage) GetProfile(
 		var source *string
 		var settings models.ProfileSettings
 
-		if err := settingsRows.Scan(&source, &settings.ProfileID, &settings.RelevancyFilter, &settings.ExtractedProperties, &settings.CreatedAt, &settings.UpdatedAt); err != nil {
+		if err := settingsRows.Scan(&source, &settings.Version, &settings.RelevancyFilter, &settings.ExtractedProperties); err != nil {
 			return models.Profile{}, false, fmt.Errorf("scan: %w", err)
 		}
 
+		var version *models.ProfileVersion
+
+		for _, v := range profile.Versions {
+			if v.Version == settings.Version {
+				version = &v
+
+				break
+			}
+		}
+
+		if version == nil {
+			continue
+		}
+
 		if source == nil {
-			profile.DefaultSettings = &settings
+			version.DefaultSettings = &settings
 
 			continue
 		}
 
-		if profile.SourcesSettings == nil {
-			profile.SourcesSettings = make(map[string]models.ProfileSettings)
+		if version.SourcesSettings == nil {
+			version.SourcesSettings = make(map[string]models.ProfileSettings)
 		}
 
-		profile.SourcesSettings[*source] = settings
+		version.SourcesSettings[*source] = settings
 	}
 
 	return profile, true, nil
@@ -109,12 +160,28 @@ func (s *ScoutStorage) GetProfile(
 
 func (s *ScoutStorage) GetAllProfiles(ctx context.Context) ([]models.Profile, error) {
 	getProfilesQuery := `
-		SELECT p.id, p.name, p.created_at, p.updated_at
+		SELECT p.id, p.name, p.selected_version, p.created_at, p.updated_at
 		FROM scout.profiles p
 	`
 
+	getProfileVersionsQuery := `
+		SELECT
+			profile_id,
+			version,
+			test_mode,
+			created_at,
+			updated_at
+		FROM scout.profile_versions
+		WHERE profile_id = $1
+	`
+
 	getProfileSettingsQuery := `
-		SELECT ps.profile_id, ps.source, ps.relevancy_filter, ps.extracted_properties, ps.created_at, ps.updated_at
+		SELECT
+			ps.profile_id,
+			ps.version,
+			ps.source,
+			ps.relevancy_filter,
+			ps.extracted_properties
 		FROM scout.profile_settings ps
 	`
 
@@ -130,7 +197,7 @@ func (s *ScoutStorage) GetAllProfiles(ctx context.Context) ([]models.Profile, er
 	for profilesRows.Next() {
 		var profile models.Profile
 
-		if err := profilesRows.Scan(&profile.ID, &profile.Name, &profile.CreatedAt, &profile.UpdatedAt); err != nil {
+		if err := profilesRows.Scan(&profile.ID, &profile.Name, &profile.SelectedVersion, &profile.CreatedAt, &profile.UpdatedAt); err != nil {
 			return nil, fmt.Errorf("scan: %w", err)
 		}
 
@@ -138,6 +205,37 @@ func (s *ScoutStorage) GetAllProfiles(ctx context.Context) ([]models.Profile, er
 	}
 
 	if err := profilesRows.Err(); err != nil {
+		return nil, fmt.Errorf("rows: %w", err)
+	}
+
+	versionsRows, err := s.pool.Query(ctx, getProfileVersionsQuery)
+	if err != nil {
+		return nil, fmt.Errorf("query: %w", err)
+	}
+
+	defer versionsRows.Close()
+
+	for versionsRows.Next() {
+		var profileID int64
+		var version models.ProfileVersion
+
+		if err := versionsRows.Scan(&profileID, &version.Version, &version.TestMode, &version.CreatedAt, &version.UpdatedAt); err != nil {
+			return nil, fmt.Errorf("scan: %w", err)
+		}
+
+		profile, ok := profiles[profileID]
+		if !ok {
+			s.logger.Error().Int64("profile_id", profileID).Msg("profile not found")
+
+			continue
+		}
+
+		profile.Versions = append(profile.Versions, version)
+
+		profiles[profileID] = profile
+	}
+
+	if err := versionsRows.Err(); err != nil {
 		return nil, fmt.Errorf("rows: %w", err)
 	}
 
@@ -152,7 +250,7 @@ func (s *ScoutStorage) GetAllProfiles(ctx context.Context) ([]models.Profile, er
 		var source *string
 		var settings models.ProfileSettings
 
-		if err := settingsRows.Scan(&settings.ProfileID, &source, &settings.RelevancyFilter, &settings.ExtractedProperties, &settings.CreatedAt, &settings.UpdatedAt); err != nil {
+		if err := settingsRows.Scan(&settings.ProfileID, &settings.Version, &source, &settings.RelevancyFilter, &settings.ExtractedProperties); err != nil {
 			return nil, fmt.Errorf("scan: %w", err)
 		}
 
@@ -163,14 +261,30 @@ func (s *ScoutStorage) GetAllProfiles(ctx context.Context) ([]models.Profile, er
 			continue
 		}
 
+		var version *models.ProfileVersion
+
+		for _, v := range profile.Versions {
+			if v.Version == settings.Version {
+				version = &v
+
+				break
+			}
+		}
+
+		if version == nil {
+			continue
+		}
+
 		if source == nil {
-			profile.DefaultSettings = &settings
+			version.DefaultSettings = &settings
+
+			continue
 		} else {
-			if profile.SourcesSettings == nil {
-				profile.SourcesSettings = make(map[string]models.ProfileSettings)
+			if version.SourcesSettings == nil {
+				version.SourcesSettings = make(map[string]models.ProfileSettings)
 			}
 
-			profile.SourcesSettings[*source] = settings
+			version.SourcesSettings[*source] = settings
 		}
 
 		profiles[settings.ProfileID] = profile
@@ -184,29 +298,63 @@ func (s *ScoutStorage) GetAllProfiles(ctx context.Context) ([]models.Profile, er
 }
 
 func (s *ScoutStorage) DeleteProfileByID(ctx context.Context, id int64) error {
-	query := `
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin tx: %w", err)
+	}
+
+	defer func() {
+		rollbackErr := tx.Rollback(ctx)
+
+		if rollbackErr == nil {
+			return
+		}
+
+		s.logger.Error().Err(rollbackErr).Msg("failed to rollback tx")
+	}()
+
+	deleteProfileQuery := `
 		DELETE FROM scout.profiles p
 		WHERE p.id = $1
 	`
 
-	_, err := s.pool.Exec(ctx, query, id)
+	deleteProfileVersionsQuery := `
+		DELETE FROM scout.profile_versions pv
+		WHERE pv.profile_id = $1
+	`
+
+	deleteProfileSettingsQuery := `
+		DELETE FROM scout.profile_settings ps
+		WHERE ps.profile_id = $1
+	`
+
+	_, err = tx.Exec(ctx, deleteProfileQuery, id)
 	if err != nil {
-		return fmt.Errorf("exec: %w", err)
+		return fmt.Errorf("delete profile: %w", err)
+	}
+
+	_, err = tx.Exec(ctx, deleteProfileVersionsQuery, id)
+	if err != nil {
+		return fmt.Errorf("delete profile versions: %w", err)
+	}
+
+	_, err = tx.Exec(ctx, deleteProfileSettingsQuery, id)
+	if err != nil {
+		return fmt.Errorf("delete profile settings: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit tx: %w", err)
 	}
 
 	return nil
 }
 
-func (s *ScoutStorage) CreateProfile(ctx context.Context, profile models.Profile) (profileID int64, err error) {
+func (s *ScoutStorage) CreateProfile(ctx context.Context, input models.ProfileCreateInput) (profileID int64, err error) {
 	createProfileQuery := `
-		INSERT INTO scout.profiles (name, created_at, updated_at)
-		VALUES ($1, NOW(), NOW())
+		INSERT INTO scout.profiles (name, selected_version, created_at, updated_at)
+		VALUES ($1, $2, NOW(), NOW())
 		RETURNING id
-	`
-
-	createSettingsQuery := `
-		INSERT INTO scout.profile_settings (profile_id, source, relevancy_filter, extracted_properties, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, NOW(), NOW())
 	`
 
 	tx, err := s.pool.Begin(ctx)
@@ -224,47 +372,13 @@ func (s *ScoutStorage) CreateProfile(ctx context.Context, profile models.Profile
 		s.logger.Error().Err(rollbackErr).Msg("failed to rollback tx")
 	}()
 
-	createProfileRow := tx.QueryRow(ctx, createProfileQuery, profile.Name)
+	createProfileRow := tx.QueryRow(ctx, createProfileQuery, input.Name, input.Version.Version)
 	if err := createProfileRow.Scan(&profileID); err != nil {
 		return 0, fmt.Errorf("scan: %w", err)
 	}
 
-	if profile.DefaultSettings != nil {
-		extractedPropertiesJSON, err := json.Marshal(profile.DefaultSettings.ExtractedProperties)
-		if err != nil {
-			return 0, fmt.Errorf("marshal default settings extracted properties: %w", err)
-		}
-
-		_, err = tx.Exec(
-			ctx,
-			createSettingsQuery,
-			profileID,
-			nil,
-			profile.DefaultSettings.RelevancyFilter,
-			extractedPropertiesJSON,
-		)
-		if err != nil {
-			return 0, fmt.Errorf("insert default settings: %w", err)
-		}
-	}
-
-	for source, settings := range profile.SourcesSettings {
-		extractedPropertiesJSON, err := json.Marshal(settings.ExtractedProperties)
-		if err != nil {
-			return 0, fmt.Errorf("marshal source settings extracted properties: %w", err)
-		}
-
-		_, err = tx.Exec(
-			ctx,
-			createSettingsQuery,
-			profileID,
-			source,
-			settings.RelevancyFilter,
-			extractedPropertiesJSON,
-		)
-		if err != nil {
-			return 0, fmt.Errorf("insert source settings: %w", err)
-		}
+	if err := s.insertVersion(ctx, tx, profileID, input.Version); err != nil {
+		return 0, fmt.Errorf("insert version: %w", err)
 	}
 
 	if err := tx.Commit(ctx); err != nil {
@@ -272,6 +386,223 @@ func (s *ScoutStorage) CreateProfile(ctx context.Context, profile models.Profile
 	}
 
 	return profileID, nil
+}
+
+func (s *ScoutStorage) insertVersion(ctx context.Context, tx pgx.Tx, profileID int64, version models.ProfileVersion) error {
+	insertVersionQuery := `
+		INSERT INTO scout.profile_versions (profile_id, version, test_mode, created_at, updated_at)
+		VALUES ($1, $2, $3, NOW(), NOW())
+	`
+
+	insertSettingsQuery := `
+		INSERT INTO scout.profile_settings (profile_id, version, source, relevancy_filter, extracted_properties, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+	`
+
+	_, err := tx.Exec(ctx, insertVersionQuery, profileID, version.Version, true)
+	if err != nil {
+		return fmt.Errorf("insert version: %w", err)
+	}
+
+	sourceToSettings := make(map[*string]models.ProfileSettings)
+
+	if version.DefaultSettings != nil {
+		sourceToSettings[nil] = *version.DefaultSettings
+	}
+
+	for source, settings := range version.SourcesSettings {
+		sourceToSettings[&source] = settings
+	}
+
+	for source, settings := range sourceToSettings {
+		extractedPropertiesJSON, err := json.Marshal(settings.ExtractedProperties)
+		if err != nil {
+			return fmt.Errorf("marshal extracted properties: %w", err)
+		}
+
+		_, err = tx.Exec(ctx, insertSettingsQuery, profileID, version.Version, source, settings.RelevancyFilter, extractedPropertiesJSON)
+		if err != nil {
+			return fmt.Errorf("insert settings: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (s *ScoutStorage) UpdateProfileVersion(ctx context.Context, profileID int64, version int64, update models.VersionUpdate) error {
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin tx: %w", err)
+	}
+
+	defer func() {
+		rollbackErr := tx.Rollback(ctx)
+
+		if rollbackErr == nil {
+			return
+		}
+
+		s.logger.Error().Err(rollbackErr).Msg("failed to rollback tx")
+	}()
+
+	isVersionInTestModeQuery := `
+		SELECT test_mode
+		FROM scout.profile_versions
+		WHERE profile_id = $1 AND version = $2
+		LIMIT 1
+		FOR UPDATE
+	`
+
+	row := tx.QueryRow(ctx, isVersionInTestModeQuery, profileID, version)
+
+	var isInTestMode bool
+
+	if err := row.Scan(&isInTestMode); err != nil {
+		return fmt.Errorf("scan: %w", err)
+	}
+
+	if !isInTestMode {
+		return fmt.Errorf("version is not in test mode")
+	}
+
+	// (source) => (settings update, if nil delete else update)
+	sourceSettingsUpdates := make(map[*string]*models.ProfileSettings)
+
+	if update.DefaultSettings.IsSet() {
+		sourceSettingsUpdates[nil] = update.DefaultSettings.Value
+	}
+
+	for source, settings := range update.SourcesSettings {
+		sourceSettingsUpdates[&source] = settings
+	}
+
+	for source, settingsUpdate := range sourceSettingsUpdates {
+		if settingsUpdate == nil {
+			// Delete settings
+			sb := tools.Psq().
+				Delete("scout.profile_settings").
+				Where(sq.Eq{"profile_id": profileID}).
+				Where(sq.Eq{"version": version}).
+				Where(sq.Eq{"source": source})
+
+			deleteSettingsSQL, deleteSettingsArgs, err := sb.ToSql()
+			if err != nil {
+				return fmt.Errorf("deleteSettingsSb to sql: %w", err)
+			}
+
+			_, err = tx.Exec(ctx, deleteSettingsSQL, deleteSettingsArgs...)
+			if err != nil {
+				return fmt.Errorf("delete scout.profile_settings: %w", err)
+			}
+
+			continue
+		}
+
+		// Inserting if not exists
+
+		extractedPropertiesJSON, err := json.Marshal(settingsUpdate.ExtractedProperties)
+		if err != nil {
+			return fmt.Errorf("marshal extracted properties: %w", err)
+		}
+
+		insertSettingsSb := tools.Psq().
+			Insert("scout.profile_settings").
+			Columns("profile_id", "version", "source", "relevancy_filter", "extracted_properties").
+			Values(profileID, version, source, settingsUpdate.RelevancyFilter, extractedPropertiesJSON).
+			Suffix("ON CONFLICT DO NOTHING")
+
+		insertSettingsSQL, insertSettingsArgs, err := insertSettingsSb.ToSql()
+		if err != nil {
+			return fmt.Errorf("insertSettingsSb to sql: %w", err)
+		}
+
+		_, err = tx.Exec(ctx, insertSettingsSQL, insertSettingsArgs...)
+		if err != nil {
+			return fmt.Errorf("insert scout.profile_settings: %w", err)
+		}
+
+		sb := tools.Psq().
+			Update("scout.profile_settings").
+			Where(sq.Eq{"profile_id": profileID}).
+			Where(sq.Eq{"version": version}).
+			Where(sq.Eq{"source": source}).
+			Set("updated_at", sq.Expr("NOW()")).
+			Set("relevancy_filter", settingsUpdate.RelevancyFilter).
+			Set("extracted_properties", extractedPropertiesJSON)
+
+		updateSettingsSQL, updateSettingsArgs, err := sb.ToSql()
+		if err != nil {
+			return fmt.Errorf("updateSettingsSb to sql: %w", err)
+		}
+
+		_, err = tx.Exec(ctx, updateSettingsSQL, updateSettingsArgs...)
+		if err != nil {
+			return fmt.Errorf("update scout.profile_settings: %w", err)
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit tx: %w", err)
+	}
+
+	return nil
+}
+
+func (s *ScoutStorage) CreateProfileVersion(ctx context.Context, profileID int64, version models.ProfileVersion) (id int64, err error) {
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("begin tx: %w", err)
+	}
+
+	defer func() {
+		rollbackErr := tx.Rollback(ctx)
+
+		if rollbackErr == nil {
+			return
+		}
+
+		s.logger.Error().Err(rollbackErr).Msg("failed to rollback tx")
+	}()
+
+	maxVersion := int64(0)
+
+	maxVersionQuery := `
+		SELECT MAX(version) FROM scout.profile_versions WHERE profile_id = $1
+	`
+
+	row := tx.QueryRow(ctx, maxVersionQuery, profileID)
+	if err := row.Scan(&maxVersion); err != nil {
+		if !errors.Is(err, pgx.ErrNoRows) {
+			return 0, fmt.Errorf("scan: %w", err)
+		}
+	}
+
+	version.Version = maxVersion + 1
+
+	if err := s.insertVersion(ctx, tx, profileID, version); err != nil {
+		return 0, fmt.Errorf("insert version: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return 0, fmt.Errorf("commit tx: %w", err)
+	}
+
+	return version.Version, nil
+}
+
+func (s *ScoutStorage) DeployProfileVersion(ctx context.Context, profileID int64, version int64) error {
+	deployProfileVersionQuery := `
+		UPDATE scout.profile_versions
+		SET test_mode = false, updated_at = NOW()
+		WHERE profile_id = $1 AND version = $2
+	`
+
+	_, err := s.pool.Exec(ctx, deployProfileVersionQuery, profileID, version)
+	if err != nil {
+		return fmt.Errorf("deploy profile version: %w", err)
+	}
+
+	return nil
 }
 
 //nolint:gocognit,funlen // TODO: refactor
@@ -310,93 +641,6 @@ func (s *ScoutStorage) UpdateProfile(ctx context.Context, update models.ProfileU
 	_, err = tx.Exec(ctx, updateProfileSQL, updateProfileArgs...)
 	if err != nil {
 		return fmt.Errorf("update scout.profiles: %w", err)
-	}
-
-	// (source) => (settings update, if nil delete else update)
-	sourceSettingsUpdates := make(map[*string]*models.ProfileSettingsUpdate)
-
-	if update.DefaultSettings.IsSet() {
-		sourceSettingsUpdates[nil] = update.DefaultSettings.Value
-	}
-
-	for source, settings := range update.SourcesSettings {
-		sourceSettingsUpdates[&source] = settings
-	}
-
-	for source, settingsUpdate := range sourceSettingsUpdates {
-		if settingsUpdate == nil {
-			// Delete settings
-			sb := tools.Psq().
-				Delete("scout.profile_settings").
-				Where(sq.Eq{"profile_id": update.ProfileID}).
-				Where(sq.Eq{"source": source})
-
-			deleteSettingsSQL, deleteSettingsArgs, err := sb.ToSql()
-			if err != nil {
-				return fmt.Errorf("deleteSettingsSb to sql: %w", err)
-			}
-
-			_, err = tx.Exec(ctx, deleteSettingsSQL, deleteSettingsArgs...)
-			if err != nil {
-				return fmt.Errorf("delete scout.profile_settings: %w", err)
-			}
-
-			continue
-		}
-
-		// Update settings
-
-		if settingsUpdate.RelevancyFilter == nil && settingsUpdate.ExtractedProperties == nil {
-			// No changes
-			continue
-		}
-
-		// Inserting if not exists
-
-		insertSettingsSb := tools.Psq().
-			Insert("scout.profile_settings").
-			Columns("profile_id", "source", "relevancy_filter", "extracted_properties").
-			Values(update.ProfileID, source, "", "{}").
-			Suffix("ON CONFLICT DO NOTHING")
-
-		insertSettingsSQL, insertSettingsArgs, err := insertSettingsSb.ToSql()
-		if err != nil {
-			return fmt.Errorf("insertSettingsSb to sql: %w", err)
-		}
-
-		_, err = tx.Exec(ctx, insertSettingsSQL, insertSettingsArgs...)
-		if err != nil {
-			return fmt.Errorf("insert scout.profile_settings: %w", err)
-		}
-
-		sb := tools.Psq().
-			Update("scout.profile_settings").
-			Where(sq.Eq{"profile_id": update.ProfileID}).
-			Where(sq.Eq{"source": source}).
-			Set("updated_at", sq.Expr("NOW()"))
-
-		if settingsUpdate.RelevancyFilter != nil {
-			sb = sb.Set("relevancy_filter", *settingsUpdate.RelevancyFilter)
-		}
-
-		if settingsUpdate.ExtractedProperties != nil {
-			extractedPropertiesJSON, err := json.Marshal(settingsUpdate.ExtractedProperties)
-			if err != nil {
-				return fmt.Errorf("marshal extracted properties: %w", err)
-			}
-
-			sb = sb.Set("extracted_properties", extractedPropertiesJSON)
-		}
-
-		updateSettingsSQL, updateSettingsArgs, err := sb.ToSql()
-		if err != nil {
-			return fmt.Errorf("updateSettingsSb to sql: %w", err)
-		}
-
-		_, err = tx.Exec(ctx, updateSettingsSQL, updateSettingsArgs...)
-		if err != nil {
-			return fmt.Errorf("update scout.profile_settings: %w", err)
-		}
 	}
 
 	if err := tx.Commit(ctx); err != nil {
