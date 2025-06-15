@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -79,19 +80,19 @@ func NewGinEngine(server *Server, middlewares ...gin.HandlerFunc) *gin.Engine {
 	return ginEngine
 }
 
-// DeleteApiProfilesId implements oapi.StrictServerInterface.
+// DeleteApiProfilesProfileId implements oapi.StrictServerInterface.
 //
 //nolint:revive,staticcheck // naming is dictated by oapi-codegen
-func (s *Server) DeleteApiProfilesId(
+func (s *Server) DeleteApiProfilesProfileId(
 	ctx context.Context,
-	request oapi.DeleteApiProfilesIdRequestObject,
-) (oapi.DeleteApiProfilesIdResponseObject, error) {
-	if err := s.scout.DeleteProfile(ctx, int64(request.Id)); err != nil {
+	request oapi.DeleteApiProfilesProfileIdRequestObject,
+) (oapi.DeleteApiProfilesProfileIdResponseObject, error) {
+	if err := s.scout.DeleteProfile(ctx, int64(request.ProfileId)); err != nil {
 		//nolint:nilerr // error is passed to response
-		return oapi.DeleteApiProfilesId500JSONResponse{Error: err.Error()}, nil
+		return oapi.DeleteApiProfilesProfileId500JSONResponse{Error: err.Error()}, nil
 	}
 
-	return oapi.DeleteApiProfilesId204Response{}, nil
+	return oapi.DeleteApiProfilesProfileId204Response{}, nil
 }
 
 // GetApiProfiles implements oapi.StrictServerInterface.
@@ -116,24 +117,24 @@ func (s *Server) GetApiProfiles(
 	return oapi.GetApiProfiles200JSONResponse(oapiProfiles), nil
 }
 
-// GetApiProfilesId implements oapi.StrictServerInterface.
+// GetApiProfilesProfileId implements oapi.StrictServerInterface.
 //
 //nolint:revive,staticcheck // naming is dictated by oapi-codegen
-func (s *Server) GetApiProfilesId(
+func (s *Server) GetApiProfilesProfileId(
 	ctx context.Context,
-	request oapi.GetApiProfilesIdRequestObject,
-) (oapi.GetApiProfilesIdResponseObject, error) {
-	profile, found, err := s.scout.GetProfile(ctx, int64(request.Id))
+	request oapi.GetApiProfilesProfileIdRequestObject,
+) (oapi.GetApiProfilesProfileIdResponseObject, error) {
+	profile, found, err := s.scout.GetProfile(ctx, int64(request.ProfileId))
 	if err != nil {
 		//nolint:nilerr // error is passed to response
-		return oapi.GetApiProfilesId500JSONResponse{Error: err.Error()}, nil
+		return oapi.GetApiProfilesProfileId500JSONResponse{Error: err.Error()}, nil
 	}
 
 	if !found {
-		return oapi.GetApiProfilesId404Response{}, nil
+		return oapi.GetApiProfilesProfileId404Response{}, nil
 	}
 
-	return oapi.GetApiProfilesId200JSONResponse(profileFromModel(profile)), nil
+	return oapi.GetApiProfilesProfileId200JSONResponse(profileFromModel(profile)), nil
 }
 
 // GetApiSourcesRedditSubreddits implements oapi.StrictServerInterface.
@@ -279,7 +280,7 @@ func (s *Server) PostApiDetectionsList(
 		}
 
 		if post, ok := sourceToPosts[detection.Source][detection.SourceID]; ok {
-			oapiDetection.SourcePost = &post.Post
+			oapiDetection.SourcePost = lo.ToPtr(json.RawMessage(post.JSON))
 		}
 
 		if tags, ok := detectionTagsIndex[detection.ID]; ok {
@@ -336,21 +337,21 @@ func (s *Server) PostApiProfiles(
 // PutApiProfilesId implements oapi.StrictServerInterface.
 //
 //nolint:revive,staticcheck // naming is dictated by oapi-codegen
-func (s *Server) PutApiProfilesId(
+func (s *Server) PutApiProfilesProfileId(
 	ctx context.Context,
-	request oapi.PutApiProfilesIdRequestObject,
-) (oapi.PutApiProfilesIdResponseObject, error) {
+	request oapi.PutApiProfilesProfileIdRequestObject,
+) (oapi.PutApiProfilesProfileIdResponseObject, error) {
 	s.logger.Info().Interface("request", request).Msg("put api profiles id")
 
-	update := profileUpdateFromOapi(int64(request.Id), *request.Body)
+	update := profileUpdateFromOapi(int64(request.ProfileId), *request.Body)
 
 	err := s.scout.UpdateProfile(ctx, update)
 	if err != nil {
 		//nolint:nilerr // error is passed to response
-		return oapi.PutApiProfilesId500JSONResponse{Error: err.Error()}, nil
+		return oapi.PutApiProfilesProfileId500JSONResponse{Error: err.Error()}, nil
 	}
 
-	return oapi.PutApiProfilesId200Response{}, nil
+	return oapi.PutApiProfilesProfileId200Response{}, nil
 }
 
 // PostApiSourcesRedditSubredditsSubredditAddProfiles implements oapi.StrictServerInterface.
@@ -389,13 +390,13 @@ func (s *Server) PostApiSourcesRedditSubredditsSubredditRemoveProfiles(
 	return oapi.PostApiSourcesRedditSubredditsSubredditRemoveProfiles204Response{}, nil
 }
 
-// PostApiProfilesIdJumpstart implements oapi.StrictServerInterface.
+// PostApiProfilesProfileIdJumpstart implements oapi.StrictServerInterface.
 //
 //nolint:revive,staticcheck // naming is dictated by oapi-codegen
-func (s *Server) PostApiProfilesIdJumpstart(
+func (s *Server) PostApiProfilesProfileIdJumpstart(
 	ctx context.Context,
-	request oapi.PostApiProfilesIdJumpstartRequestObject,
-) (oapi.PostApiProfilesIdJumpstartResponseObject, error) {
+	request oapi.PostApiProfilesProfileIdJumpstartRequestObject,
+) (oapi.PostApiProfilesProfileIdJumpstartResponseObject, error) {
 	var jumpstartDays, jumpstartLimit *int
 	var excludeAlreadyAnalyzed bool
 
@@ -411,12 +412,17 @@ func (s *Server) PostApiProfilesIdJumpstart(
 		excludeAlreadyAnalyzed = *request.Body.ExcludeAlreadyAnalyzed
 	}
 
-	if err := s.scout.JumpstartProfile(ctx, int64(request.Id), excludeAlreadyAnalyzed, jumpstartDays, jumpstartLimit); err != nil {
+	if err := s.scout.JumpstartProfile(ctx, int64(request.ProfileId), excludeAlreadyAnalyzed, jumpstartDays, jumpstartLimit); err != nil {
 		//nolint:nilerr // error is passed to response
-		return oapi.PostApiProfilesIdJumpstart500JSONResponse{Error: err.Error()}, nil
+		return oapi.PostApiProfilesProfileIdJumpstart500JSONResponse{Error: err.Error()}, nil
 	}
 
-	return oapi.PostApiProfilesIdJumpstart204Response{}, nil
+	return oapi.PostApiProfilesProfileIdJumpstart204Response{}, nil
+}
+
+// GetApiStatisticsProfileId implements oapi.StrictServerInterface.
+func (s *Server) GetApiStatisticsProfileId(ctx context.Context, request oapi.GetApiStatisticsProfileIdRequestObject) (oapi.GetApiStatisticsProfileIdResponseObject, error) {
+	panic("unimplemented")
 }
 
 func profileFromModel(profile models.Profile) oapi.Profile {

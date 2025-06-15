@@ -233,6 +233,7 @@ func (s *Scout) JumpstartProfile(
 
 		for _, sourceID := range sourceIDs {
 			analysisTasks = append(analysisTasks, models.AnalysisTask{
+				Type: models.ManualTaskType,
 				Parameters: models.AnalysisParameters{
 					Source:     source,
 					SourceID:   sourceID,

@@ -55,7 +55,7 @@ func (s *ScoutStorage) GetProfile(
 	profileID int64,
 ) (profile models.Profile, found bool, err error) {
 	getProfileQuery := `
-		SELECT p.id, p.name, p.created_at, p.updated_at
+		SELECT p.id, p.name, p.active, p.created_at, p.updated_at
 		FROM scout.profiles p
 		WHERE p.id = $1
 	`
@@ -68,7 +68,7 @@ func (s *ScoutStorage) GetProfile(
 
 	profileRow := s.pool.QueryRow(ctx, getProfileQuery, profileID)
 
-	if err := profileRow.Scan(&profile.ID, &profile.Name, &profile.CreatedAt, &profile.UpdatedAt); err != nil {
+	if err := profileRow.Scan(&profile.ID, &profile.Name, &profile.Active, &profile.CreatedAt, &profile.UpdatedAt); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return models.Profile{}, false, nil
 		}
@@ -109,7 +109,7 @@ func (s *ScoutStorage) GetProfile(
 
 func (s *ScoutStorage) GetAllProfiles(ctx context.Context) ([]models.Profile, error) {
 	getProfilesQuery := `
-		SELECT p.id, p.name, p.created_at, p.updated_at
+		SELECT p.id, p.name, p.active, p.created_at, p.updated_at
 		FROM scout.profiles p
 	`
 
@@ -130,7 +130,7 @@ func (s *ScoutStorage) GetAllProfiles(ctx context.Context) ([]models.Profile, er
 	for profilesRows.Next() {
 		var profile models.Profile
 
-		if err := profilesRows.Scan(&profile.ID, &profile.Name, &profile.CreatedAt, &profile.UpdatedAt); err != nil {
+		if err := profilesRows.Scan(&profile.ID, &profile.Name, &profile.Active, &profile.CreatedAt, &profile.UpdatedAt); err != nil {
 			return nil, fmt.Errorf("scan: %w", err)
 		}
 
@@ -199,8 +199,8 @@ func (s *ScoutStorage) DeleteProfileByID(ctx context.Context, id int64) error {
 
 func (s *ScoutStorage) CreateProfile(ctx context.Context, profile models.Profile) (profileID int64, err error) {
 	createProfileQuery := `
-		INSERT INTO scout.profiles (name, created_at, updated_at)
-		VALUES ($1, NOW(), NOW())
+		INSERT INTO scout.profiles (name, active, created_at, updated_at)
+		VALUES ($1, $2, NOW(), NOW())
 		RETURNING id
 	`
 
@@ -224,7 +224,7 @@ func (s *ScoutStorage) CreateProfile(ctx context.Context, profile models.Profile
 		s.logger.Error().Err(rollbackErr).Msg("failed to rollback tx")
 	}()
 
-	createProfileRow := tx.QueryRow(ctx, createProfileQuery, profile.Name)
+	createProfileRow := tx.QueryRow(ctx, createProfileQuery, profile.Name, profile.Active)
 	if err := createProfileRow.Scan(&profileID); err != nil {
 		return 0, fmt.Errorf("scan: %w", err)
 	}
@@ -300,6 +300,10 @@ func (s *ScoutStorage) UpdateProfile(ctx context.Context, update models.ProfileU
 
 	if update.Name != nil {
 		updateProfileSb = updateProfileSb.Set("name", *update.Name)
+	}
+
+	if update.Active != nil {
+		updateProfileSb = updateProfileSb.Set("active", *update.Active)
 	}
 
 	updateProfileSQL, updateProfileArgs, err := updateProfileSb.ToSql()

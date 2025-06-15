@@ -9,6 +9,7 @@ import (
 type Profile struct {
 	ID              int64                      `json:"id"`
 	Name            string                     `json:"name"`
+	Active          bool                       `json:"active"`
 	DefaultSettings *ProfileSettings           `json:"default_settings"`
 	SourcesSettings map[string]ProfileSettings `json:"sources_settings"`
 	CreatedAt       time.Time                  `json:"created_at"`
@@ -26,6 +27,7 @@ type ProfileSettings struct {
 type ProfileUpdate struct {
 	ProfileID int64
 	Name      *string
+	Active    *bool
 	// If the value is not set, it will be ignored
 	//
 	// If the value is set, null means that default settings must be deleted

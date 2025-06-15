@@ -34,6 +34,7 @@ func NewTaskStorage(
 
 func (s *TaskStorage) Add(ctx context.Context, tasks []models.AnalysisTask) error {
 	columns := []string{
+		"type",
 		"source",
 		"source_id",
 		"profile_id",
@@ -49,6 +50,7 @@ func (s *TaskStorage) Add(ctx context.Context, tasks []models.AnalysisTask) erro
 
 	rows := lo.Map(tasks, func(task models.AnalysisTask, _ int) []any {
 		return []any{
+			task.Type,                  // type
 			task.Parameters.Source,     // source
 			task.Parameters.SourceID,   // source_id
 			task.Parameters.ProfileID,  // profile_id
@@ -76,24 +78,31 @@ func (s *TaskStorage) Add(ctx context.Context, tasks []models.AnalysisTask) erro
 	return nil
 }
 
-func (s *TaskStorage) Claim(ctx context.Context) (task models.AnalysisTask, anyTask bool, err error) {
+func (s *TaskStorage) Claim(ctx context.Context, taskTypes []string, profileIDs []int64) (task models.AnalysisTask, anyTask bool, err error) {
 	query := `
 		UPDATE scout.analysis_tasks
 		SET is_claimed = true, claimed_at = NOW()
 		WHERE id IN (
 			SELECT id
 			FROM scout.analysis_tasks
-			WHERE is_claimed = false AND is_committed = false AND is_failed = false AND claim_available_at < NOW()
+			WHERE 1=1
+				AND is_claimed = false
+				AND is_committed = false
+				AND is_failed = false
+				AND claim_available_at < NOW()
+				AND "type" = ANY($1)
+				AND profile_id = ANY($2)
 			LIMIT 1
 			FOR UPDATE SKIP LOCKED
 		)
-		RETURNING id, source, source_id, profile_id, should_save
+		RETURNING id, "type", source, source_id, profile_id, should_save
 	`
 
-	row := s.pool.QueryRow(ctx, query)
+	row := s.pool.QueryRow(ctx, query, taskTypes, profileIDs)
 
 	err = row.Scan(
 		&task.ID,
+		&task.Type,
 		&task.Parameters.Source,
 		&task.Parameters.SourceID,
 		&task.Parameters.ProfileID,

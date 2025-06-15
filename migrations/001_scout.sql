@@ -7,6 +7,7 @@ CREATE SCHEMA IF NOT EXISTS scout;
 CREATE TABLE IF NOT EXISTS scout.profiles (
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
+    active BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     UNIQUE (name)
@@ -45,6 +46,7 @@ CREATE TABLE IF NOT EXISTS scout.detection_tags (
 -- Create analysis tasks table
 CREATE TABLE IF NOT EXISTS scout.analysis_tasks (
     id BIGSERIAL PRIMARY KEY,
+    "type" VARCHAR(255) NOT NULL, -- scheduled / manual
     source VARCHAR(255) NOT NULL,
     source_id VARCHAR(255) NOT NULL,
     profile_id BIGINT NOT NULL,

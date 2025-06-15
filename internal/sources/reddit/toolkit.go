@@ -2,7 +2,6 @@ package reddit
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -86,9 +85,7 @@ func (t *Toolkit) GetSourcePosts(ctx context.Context, ids []string) ([]models.So
 			continue
 		}
 
-		if unmarshalErr := json.Unmarshal(rawPost.Data, &sourcePost.Post); unmarshalErr != nil {
-			return nil, fmt.Errorf("unmarshal post: %w", unmarshalErr)
-		}
+		sourcePost.JSON = rawPost.Data
 
 		posts = append(posts, sourcePost)
 	}

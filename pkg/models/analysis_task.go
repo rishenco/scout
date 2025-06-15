@@ -2,11 +2,21 @@ package models
 
 import "time"
 
+const (
+	ScheduledTaskType = "scheduled"
+	ManualTaskType    = "manual"
+)
+
 type AnalysisTask struct {
 	// ID is task id
 	//
 	// Example: 123
 	ID int64 `json:"id"`
+
+	// Type is a type of the task
+	//
+	// Examples: scheduled, manual
+	Type string `json:"type"`
 
 	// Parameters is a set of parameters for the task
 	Parameters AnalysisParameters `json:"parameters"`

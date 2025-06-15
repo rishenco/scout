@@ -86,9 +86,9 @@ type Error struct {
 
 // ListedDetection defines model for ListedDetection.
 type ListedDetection struct {
-	Detection  Detection               `json:"detection"`
-	SourcePost *map[string]interface{} `json:"source_post,omitempty"`
-	Tags       *DetectionTags          `json:"tags,omitempty"`
+	Detection  Detection        `json:"detection"`
+	SourcePost *json.RawMessage `json:"source_post,omitempty"`
+	Tags       *DetectionTags   `json:"tags,omitempty"`
 }
 
 // Profile defines model for Profile.
@@ -127,8 +127,15 @@ type ProfileSettingsUpdate struct {
 	RelevancyFilter     *string             `json:"relevancy_filter,omitempty"`
 }
 
+// ProfileStatistics defines model for ProfileStatistics.
+type ProfileStatistics struct {
+	AutoTasks   int `json:"auto_tasks"`
+	ManualTasks int `json:"manual_tasks"`
+}
+
 // ProfileUpdate defines model for ProfileUpdate.
 type ProfileUpdate struct {
+	Active          *bool                                    `json:"active,omitempty"`
 	DefaultSettings nullable.Nullable[ProfileSettingsUpdate] `json:"default_settings,omitempty"`
 	Name            *string                                  `json:"name,omitempty"`
 	SourcesSettings *map[string]*ProfileSettingsUpdate       `json:"sources_settings,omitempty"`
@@ -167,11 +174,11 @@ type PutApiDetectionsTagsJSONRequestBody = DetectionTagUpdateRequest
 // PostApiProfilesJSONRequestBody defines body for PostApiProfiles for application/json ContentType.
 type PostApiProfilesJSONRequestBody = Profile
 
-// PutApiProfilesIdJSONRequestBody defines body for PutApiProfilesId for application/json ContentType.
-type PutApiProfilesIdJSONRequestBody = ProfileUpdate
+// PutApiProfilesProfileIdJSONRequestBody defines body for PutApiProfilesProfileId for application/json ContentType.
+type PutApiProfilesProfileIdJSONRequestBody = ProfileUpdate
 
-// PostApiProfilesIdJumpstartJSONRequestBody defines body for PostApiProfilesIdJumpstart for application/json ContentType.
-type PostApiProfilesIdJumpstartJSONRequestBody = ProfileJumpstartRequest
+// PostApiProfilesProfileIdJumpstartJSONRequestBody defines body for PostApiProfilesProfileIdJumpstart for application/json ContentType.
+type PostApiProfilesProfileIdJumpstartJSONRequestBody = ProfileJumpstartRequest
 
 // PostApiSourcesRedditSubredditsSubredditAddProfilesJSONRequestBody defines body for PostApiSourcesRedditSubredditsSubredditAddProfiles for application/json ContentType.
 type PostApiSourcesRedditSubredditsSubredditAddProfilesJSONRequestBody PostApiSourcesRedditSubredditsSubredditAddProfilesJSONBody
@@ -275,21 +282,21 @@ type ClientInterface interface {
 
 	PostApiProfiles(ctx context.Context, body PostApiProfilesJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// DeleteApiProfilesId request
-	DeleteApiProfilesId(ctx context.Context, id int, reqEditors ...RequestEditorFn) (*http.Response, error)
+	// DeleteApiProfilesProfileId request
+	DeleteApiProfilesProfileId(ctx context.Context, profileId int, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// GetApiProfilesId request
-	GetApiProfilesId(ctx context.Context, id int, reqEditors ...RequestEditorFn) (*http.Response, error)
+	// GetApiProfilesProfileId request
+	GetApiProfilesProfileId(ctx context.Context, profileId int, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// PutApiProfilesIdWithBody request with any body
-	PutApiProfilesIdWithBody(ctx context.Context, id int, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	// PutApiProfilesProfileIdWithBody request with any body
+	PutApiProfilesProfileIdWithBody(ctx context.Context, profileId int, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	PutApiProfilesId(ctx context.Context, id int, body PutApiProfilesIdJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	PutApiProfilesProfileId(ctx context.Context, profileId int, body PutApiProfilesProfileIdJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// PostApiProfilesIdJumpstartWithBody request with any body
-	PostApiProfilesIdJumpstartWithBody(ctx context.Context, id int, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	// PostApiProfilesProfileIdJumpstartWithBody request with any body
+	PostApiProfilesProfileIdJumpstartWithBody(ctx context.Context, profileId int, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	PostApiProfilesIdJumpstart(ctx context.Context, id int, body PostApiProfilesIdJumpstartJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	PostApiProfilesProfileIdJumpstart(ctx context.Context, profileId int, body PostApiProfilesProfileIdJumpstartJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetApiSourcesRedditSubreddits request
 	GetApiSourcesRedditSubreddits(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -306,6 +313,9 @@ type ClientInterface interface {
 
 	// GetApiSourcesRedditSubredditsWithProfile request
 	GetApiSourcesRedditSubredditsWithProfile(ctx context.Context, params *GetApiSourcesRedditSubredditsWithProfileParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetApiStatisticsProfileId request
+	GetApiStatisticsProfileId(ctx context.Context, profileId int, reqEditors ...RequestEditorFn) (*http.Response, error)
 }
 
 func (c *Client) PostApiAnalyzeWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -416,8 +426,8 @@ func (c *Client) PostApiProfiles(ctx context.Context, body PostApiProfilesJSONRe
 	return c.Client.Do(req)
 }
 
-func (c *Client) DeleteApiProfilesId(ctx context.Context, id int, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewDeleteApiProfilesIdRequest(c.Server, id)
+func (c *Client) DeleteApiProfilesProfileId(ctx context.Context, profileId int, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteApiProfilesProfileIdRequest(c.Server, profileId)
 	if err != nil {
 		return nil, err
 	}
@@ -428,8 +438,8 @@ func (c *Client) DeleteApiProfilesId(ctx context.Context, id int, reqEditors ...
 	return c.Client.Do(req)
 }
 
-func (c *Client) GetApiProfilesId(ctx context.Context, id int, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetApiProfilesIdRequest(c.Server, id)
+func (c *Client) GetApiProfilesProfileId(ctx context.Context, profileId int, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetApiProfilesProfileIdRequest(c.Server, profileId)
 	if err != nil {
 		return nil, err
 	}
@@ -440,8 +450,8 @@ func (c *Client) GetApiProfilesId(ctx context.Context, id int, reqEditors ...Req
 	return c.Client.Do(req)
 }
 
-func (c *Client) PutApiProfilesIdWithBody(ctx context.Context, id int, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewPutApiProfilesIdRequestWithBody(c.Server, id, contentType, body)
+func (c *Client) PutApiProfilesProfileIdWithBody(ctx context.Context, profileId int, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPutApiProfilesProfileIdRequestWithBody(c.Server, profileId, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -452,8 +462,8 @@ func (c *Client) PutApiProfilesIdWithBody(ctx context.Context, id int, contentTy
 	return c.Client.Do(req)
 }
 
-func (c *Client) PutApiProfilesId(ctx context.Context, id int, body PutApiProfilesIdJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewPutApiProfilesIdRequest(c.Server, id, body)
+func (c *Client) PutApiProfilesProfileId(ctx context.Context, profileId int, body PutApiProfilesProfileIdJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPutApiProfilesProfileIdRequest(c.Server, profileId, body)
 	if err != nil {
 		return nil, err
 	}
@@ -464,8 +474,8 @@ func (c *Client) PutApiProfilesId(ctx context.Context, id int, body PutApiProfil
 	return c.Client.Do(req)
 }
 
-func (c *Client) PostApiProfilesIdJumpstartWithBody(ctx context.Context, id int, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewPostApiProfilesIdJumpstartRequestWithBody(c.Server, id, contentType, body)
+func (c *Client) PostApiProfilesProfileIdJumpstartWithBody(ctx context.Context, profileId int, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPostApiProfilesProfileIdJumpstartRequestWithBody(c.Server, profileId, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -476,8 +486,8 @@ func (c *Client) PostApiProfilesIdJumpstartWithBody(ctx context.Context, id int,
 	return c.Client.Do(req)
 }
 
-func (c *Client) PostApiProfilesIdJumpstart(ctx context.Context, id int, body PostApiProfilesIdJumpstartJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewPostApiProfilesIdJumpstartRequest(c.Server, id, body)
+func (c *Client) PostApiProfilesProfileIdJumpstart(ctx context.Context, profileId int, body PostApiProfilesProfileIdJumpstartJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPostApiProfilesProfileIdJumpstartRequest(c.Server, profileId, body)
 	if err != nil {
 		return nil, err
 	}
@@ -550,6 +560,18 @@ func (c *Client) PostApiSourcesRedditSubredditsSubredditRemoveProfiles(ctx conte
 
 func (c *Client) GetApiSourcesRedditSubredditsWithProfile(ctx context.Context, params *GetApiSourcesRedditSubredditsWithProfileParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetApiSourcesRedditSubredditsWithProfileRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetApiStatisticsProfileId(ctx context.Context, profileId int, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetApiStatisticsProfileIdRequest(c.Server, profileId)
 	if err != nil {
 		return nil, err
 	}
@@ -747,13 +769,13 @@ func NewPostApiProfilesRequestWithBody(server string, contentType string, body i
 	return req, nil
 }
 
-// NewDeleteApiProfilesIdRequest generates requests for DeleteApiProfilesId
-func NewDeleteApiProfilesIdRequest(server string, id int) (*http.Request, error) {
+// NewDeleteApiProfilesProfileIdRequest generates requests for DeleteApiProfilesProfileId
+func NewDeleteApiProfilesProfileIdRequest(server string, profileId int) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
 
-	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "profileId", runtime.ParamLocationPath, profileId)
 	if err != nil {
 		return nil, err
 	}
@@ -781,13 +803,13 @@ func NewDeleteApiProfilesIdRequest(server string, id int) (*http.Request, error)
 	return req, nil
 }
 
-// NewGetApiProfilesIdRequest generates requests for GetApiProfilesId
-func NewGetApiProfilesIdRequest(server string, id int) (*http.Request, error) {
+// NewGetApiProfilesProfileIdRequest generates requests for GetApiProfilesProfileId
+func NewGetApiProfilesProfileIdRequest(server string, profileId int) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
 
-	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "profileId", runtime.ParamLocationPath, profileId)
 	if err != nil {
 		return nil, err
 	}
@@ -815,24 +837,24 @@ func NewGetApiProfilesIdRequest(server string, id int) (*http.Request, error) {
 	return req, nil
 }
 
-// NewPutApiProfilesIdRequest calls the generic PutApiProfilesId builder with application/json body
-func NewPutApiProfilesIdRequest(server string, id int, body PutApiProfilesIdJSONRequestBody) (*http.Request, error) {
+// NewPutApiProfilesProfileIdRequest calls the generic PutApiProfilesProfileId builder with application/json body
+func NewPutApiProfilesProfileIdRequest(server string, profileId int, body PutApiProfilesProfileIdJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
 	bodyReader = bytes.NewReader(buf)
-	return NewPutApiProfilesIdRequestWithBody(server, id, "application/json", bodyReader)
+	return NewPutApiProfilesProfileIdRequestWithBody(server, profileId, "application/json", bodyReader)
 }
 
-// NewPutApiProfilesIdRequestWithBody generates requests for PutApiProfilesId with any type of body
-func NewPutApiProfilesIdRequestWithBody(server string, id int, contentType string, body io.Reader) (*http.Request, error) {
+// NewPutApiProfilesProfileIdRequestWithBody generates requests for PutApiProfilesProfileId with any type of body
+func NewPutApiProfilesProfileIdRequestWithBody(server string, profileId int, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
 
-	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "profileId", runtime.ParamLocationPath, profileId)
 	if err != nil {
 		return nil, err
 	}
@@ -862,24 +884,24 @@ func NewPutApiProfilesIdRequestWithBody(server string, id int, contentType strin
 	return req, nil
 }
 
-// NewPostApiProfilesIdJumpstartRequest calls the generic PostApiProfilesIdJumpstart builder with application/json body
-func NewPostApiProfilesIdJumpstartRequest(server string, id int, body PostApiProfilesIdJumpstartJSONRequestBody) (*http.Request, error) {
+// NewPostApiProfilesProfileIdJumpstartRequest calls the generic PostApiProfilesProfileIdJumpstart builder with application/json body
+func NewPostApiProfilesProfileIdJumpstartRequest(server string, profileId int, body PostApiProfilesProfileIdJumpstartJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
 	bodyReader = bytes.NewReader(buf)
-	return NewPostApiProfilesIdJumpstartRequestWithBody(server, id, "application/json", bodyReader)
+	return NewPostApiProfilesProfileIdJumpstartRequestWithBody(server, profileId, "application/json", bodyReader)
 }
 
-// NewPostApiProfilesIdJumpstartRequestWithBody generates requests for PostApiProfilesIdJumpstart with any type of body
-func NewPostApiProfilesIdJumpstartRequestWithBody(server string, id int, contentType string, body io.Reader) (*http.Request, error) {
+// NewPostApiProfilesProfileIdJumpstartRequestWithBody generates requests for PostApiProfilesProfileIdJumpstart with any type of body
+func NewPostApiProfilesProfileIdJumpstartRequestWithBody(server string, profileId int, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
 
-	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "profileId", runtime.ParamLocationPath, profileId)
 	if err != nil {
 		return nil, err
 	}
@@ -1075,6 +1097,40 @@ func NewGetApiSourcesRedditSubredditsWithProfileRequest(server string, params *G
 	return req, nil
 }
 
+// NewGetApiStatisticsProfileIdRequest generates requests for GetApiStatisticsProfileId
+func NewGetApiStatisticsProfileIdRequest(server string, profileId int) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "profileId", runtime.ParamLocationPath, profileId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/statistics/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 func (c *Client) applyEditors(ctx context.Context, req *http.Request, additionalEditors []RequestEditorFn) error {
 	for _, r := range c.RequestEditors {
 		if err := r(ctx, req); err != nil {
@@ -1141,21 +1197,21 @@ type ClientWithResponsesInterface interface {
 
 	PostApiProfilesWithResponse(ctx context.Context, body PostApiProfilesJSONRequestBody, reqEditors ...RequestEditorFn) (*PostApiProfilesResponse, error)
 
-	// DeleteApiProfilesIdWithResponse request
-	DeleteApiProfilesIdWithResponse(ctx context.Context, id int, reqEditors ...RequestEditorFn) (*DeleteApiProfilesIdResponse, error)
+	// DeleteApiProfilesProfileIdWithResponse request
+	DeleteApiProfilesProfileIdWithResponse(ctx context.Context, profileId int, reqEditors ...RequestEditorFn) (*DeleteApiProfilesProfileIdResponse, error)
 
-	// GetApiProfilesIdWithResponse request
-	GetApiProfilesIdWithResponse(ctx context.Context, id int, reqEditors ...RequestEditorFn) (*GetApiProfilesIdResponse, error)
+	// GetApiProfilesProfileIdWithResponse request
+	GetApiProfilesProfileIdWithResponse(ctx context.Context, profileId int, reqEditors ...RequestEditorFn) (*GetApiProfilesProfileIdResponse, error)
 
-	// PutApiProfilesIdWithBodyWithResponse request with any body
-	PutApiProfilesIdWithBodyWithResponse(ctx context.Context, id int, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutApiProfilesIdResponse, error)
+	// PutApiProfilesProfileIdWithBodyWithResponse request with any body
+	PutApiProfilesProfileIdWithBodyWithResponse(ctx context.Context, profileId int, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutApiProfilesProfileIdResponse, error)
 
-	PutApiProfilesIdWithResponse(ctx context.Context, id int, body PutApiProfilesIdJSONRequestBody, reqEditors ...RequestEditorFn) (*PutApiProfilesIdResponse, error)
+	PutApiProfilesProfileIdWithResponse(ctx context.Context, profileId int, body PutApiProfilesProfileIdJSONRequestBody, reqEditors ...RequestEditorFn) (*PutApiProfilesProfileIdResponse, error)
 
-	// PostApiProfilesIdJumpstartWithBodyWithResponse request with any body
-	PostApiProfilesIdJumpstartWithBodyWithResponse(ctx context.Context, id int, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PostApiProfilesIdJumpstartResponse, error)
+	// PostApiProfilesProfileIdJumpstartWithBodyWithResponse request with any body
+	PostApiProfilesProfileIdJumpstartWithBodyWithResponse(ctx context.Context, profileId int, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PostApiProfilesProfileIdJumpstartResponse, error)
 
-	PostApiProfilesIdJumpstartWithResponse(ctx context.Context, id int, body PostApiProfilesIdJumpstartJSONRequestBody, reqEditors ...RequestEditorFn) (*PostApiProfilesIdJumpstartResponse, error)
+	PostApiProfilesProfileIdJumpstartWithResponse(ctx context.Context, profileId int, body PostApiProfilesProfileIdJumpstartJSONRequestBody, reqEditors ...RequestEditorFn) (*PostApiProfilesProfileIdJumpstartResponse, error)
 
 	// GetApiSourcesRedditSubredditsWithResponse request
 	GetApiSourcesRedditSubredditsWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetApiSourcesRedditSubredditsResponse, error)
@@ -1172,6 +1228,9 @@ type ClientWithResponsesInterface interface {
 
 	// GetApiSourcesRedditSubredditsWithProfileWithResponse request
 	GetApiSourcesRedditSubredditsWithProfileWithResponse(ctx context.Context, params *GetApiSourcesRedditSubredditsWithProfileParams, reqEditors ...RequestEditorFn) (*GetApiSourcesRedditSubredditsWithProfileResponse, error)
+
+	// GetApiStatisticsProfileIdWithResponse request
+	GetApiStatisticsProfileIdWithResponse(ctx context.Context, profileId int, reqEditors ...RequestEditorFn) (*GetApiStatisticsProfileIdResponse, error)
 }
 
 type PostApiAnalyzeResponse struct {
@@ -1291,14 +1350,14 @@ func (r PostApiProfilesResponse) StatusCode() int {
 	return 0
 }
 
-type DeleteApiProfilesIdResponse struct {
+type DeleteApiProfilesProfileIdResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON500      *Error
 }
 
 // Status returns HTTPResponse.Status
-func (r DeleteApiProfilesIdResponse) Status() string {
+func (r DeleteApiProfilesProfileIdResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
 	}
@@ -1306,14 +1365,14 @@ func (r DeleteApiProfilesIdResponse) Status() string {
 }
 
 // StatusCode returns HTTPResponse.StatusCode
-func (r DeleteApiProfilesIdResponse) StatusCode() int {
+func (r DeleteApiProfilesProfileIdResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
 	return 0
 }
 
-type GetApiProfilesIdResponse struct {
+type GetApiProfilesProfileIdResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *Profile
@@ -1321,7 +1380,7 @@ type GetApiProfilesIdResponse struct {
 }
 
 // Status returns HTTPResponse.Status
-func (r GetApiProfilesIdResponse) Status() string {
+func (r GetApiProfilesProfileIdResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
 	}
@@ -1329,21 +1388,21 @@ func (r GetApiProfilesIdResponse) Status() string {
 }
 
 // StatusCode returns HTTPResponse.StatusCode
-func (r GetApiProfilesIdResponse) StatusCode() int {
+func (r GetApiProfilesProfileIdResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
 	return 0
 }
 
-type PutApiProfilesIdResponse struct {
+type PutApiProfilesProfileIdResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON500      *Error
 }
 
 // Status returns HTTPResponse.Status
-func (r PutApiProfilesIdResponse) Status() string {
+func (r PutApiProfilesProfileIdResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
 	}
@@ -1351,21 +1410,21 @@ func (r PutApiProfilesIdResponse) Status() string {
 }
 
 // StatusCode returns HTTPResponse.StatusCode
-func (r PutApiProfilesIdResponse) StatusCode() int {
+func (r PutApiProfilesProfileIdResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
 	return 0
 }
 
-type PostApiProfilesIdJumpstartResponse struct {
+type PostApiProfilesProfileIdJumpstartResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON500      *Error
 }
 
 // Status returns HTTPResponse.Status
-func (r PostApiProfilesIdJumpstartResponse) Status() string {
+func (r PostApiProfilesProfileIdJumpstartResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
 	}
@@ -1373,7 +1432,7 @@ func (r PostApiProfilesIdJumpstartResponse) Status() string {
 }
 
 // StatusCode returns HTTPResponse.StatusCode
-func (r PostApiProfilesIdJumpstartResponse) StatusCode() int {
+func (r PostApiProfilesProfileIdJumpstartResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -1470,6 +1529,29 @@ func (r GetApiSourcesRedditSubredditsWithProfileResponse) StatusCode() int {
 	return 0
 }
 
+type GetApiStatisticsProfileIdResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *ProfileStatistics
+	JSON500      *Error
+}
+
+// Status returns HTTPResponse.Status
+func (r GetApiStatisticsProfileIdResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetApiStatisticsProfileIdResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
 // PostApiAnalyzeWithBodyWithResponse request with arbitrary body returning *PostApiAnalyzeResponse
 func (c *ClientWithResponses) PostApiAnalyzeWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PostApiAnalyzeResponse, error) {
 	rsp, err := c.PostApiAnalyzeWithBody(ctx, contentType, body, reqEditors...)
@@ -1547,56 +1629,56 @@ func (c *ClientWithResponses) PostApiProfilesWithResponse(ctx context.Context, b
 	return ParsePostApiProfilesResponse(rsp)
 }
 
-// DeleteApiProfilesIdWithResponse request returning *DeleteApiProfilesIdResponse
-func (c *ClientWithResponses) DeleteApiProfilesIdWithResponse(ctx context.Context, id int, reqEditors ...RequestEditorFn) (*DeleteApiProfilesIdResponse, error) {
-	rsp, err := c.DeleteApiProfilesId(ctx, id, reqEditors...)
+// DeleteApiProfilesProfileIdWithResponse request returning *DeleteApiProfilesProfileIdResponse
+func (c *ClientWithResponses) DeleteApiProfilesProfileIdWithResponse(ctx context.Context, profileId int, reqEditors ...RequestEditorFn) (*DeleteApiProfilesProfileIdResponse, error) {
+	rsp, err := c.DeleteApiProfilesProfileId(ctx, profileId, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
-	return ParseDeleteApiProfilesIdResponse(rsp)
+	return ParseDeleteApiProfilesProfileIdResponse(rsp)
 }
 
-// GetApiProfilesIdWithResponse request returning *GetApiProfilesIdResponse
-func (c *ClientWithResponses) GetApiProfilesIdWithResponse(ctx context.Context, id int, reqEditors ...RequestEditorFn) (*GetApiProfilesIdResponse, error) {
-	rsp, err := c.GetApiProfilesId(ctx, id, reqEditors...)
+// GetApiProfilesProfileIdWithResponse request returning *GetApiProfilesProfileIdResponse
+func (c *ClientWithResponses) GetApiProfilesProfileIdWithResponse(ctx context.Context, profileId int, reqEditors ...RequestEditorFn) (*GetApiProfilesProfileIdResponse, error) {
+	rsp, err := c.GetApiProfilesProfileId(ctx, profileId, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
-	return ParseGetApiProfilesIdResponse(rsp)
+	return ParseGetApiProfilesProfileIdResponse(rsp)
 }
 
-// PutApiProfilesIdWithBodyWithResponse request with arbitrary body returning *PutApiProfilesIdResponse
-func (c *ClientWithResponses) PutApiProfilesIdWithBodyWithResponse(ctx context.Context, id int, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutApiProfilesIdResponse, error) {
-	rsp, err := c.PutApiProfilesIdWithBody(ctx, id, contentType, body, reqEditors...)
+// PutApiProfilesProfileIdWithBodyWithResponse request with arbitrary body returning *PutApiProfilesProfileIdResponse
+func (c *ClientWithResponses) PutApiProfilesProfileIdWithBodyWithResponse(ctx context.Context, profileId int, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutApiProfilesProfileIdResponse, error) {
+	rsp, err := c.PutApiProfilesProfileIdWithBody(ctx, profileId, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
-	return ParsePutApiProfilesIdResponse(rsp)
+	return ParsePutApiProfilesProfileIdResponse(rsp)
 }
 
-func (c *ClientWithResponses) PutApiProfilesIdWithResponse(ctx context.Context, id int, body PutApiProfilesIdJSONRequestBody, reqEditors ...RequestEditorFn) (*PutApiProfilesIdResponse, error) {
-	rsp, err := c.PutApiProfilesId(ctx, id, body, reqEditors...)
+func (c *ClientWithResponses) PutApiProfilesProfileIdWithResponse(ctx context.Context, profileId int, body PutApiProfilesProfileIdJSONRequestBody, reqEditors ...RequestEditorFn) (*PutApiProfilesProfileIdResponse, error) {
+	rsp, err := c.PutApiProfilesProfileId(ctx, profileId, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
-	return ParsePutApiProfilesIdResponse(rsp)
+	return ParsePutApiProfilesProfileIdResponse(rsp)
 }
 
-// PostApiProfilesIdJumpstartWithBodyWithResponse request with arbitrary body returning *PostApiProfilesIdJumpstartResponse
-func (c *ClientWithResponses) PostApiProfilesIdJumpstartWithBodyWithResponse(ctx context.Context, id int, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PostApiProfilesIdJumpstartResponse, error) {
-	rsp, err := c.PostApiProfilesIdJumpstartWithBody(ctx, id, contentType, body, reqEditors...)
+// PostApiProfilesProfileIdJumpstartWithBodyWithResponse request with arbitrary body returning *PostApiProfilesProfileIdJumpstartResponse
+func (c *ClientWithResponses) PostApiProfilesProfileIdJumpstartWithBodyWithResponse(ctx context.Context, profileId int, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PostApiProfilesProfileIdJumpstartResponse, error) {
+	rsp, err := c.PostApiProfilesProfileIdJumpstartWithBody(ctx, profileId, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
-	return ParsePostApiProfilesIdJumpstartResponse(rsp)
+	return ParsePostApiProfilesProfileIdJumpstartResponse(rsp)
 }
 
-func (c *ClientWithResponses) PostApiProfilesIdJumpstartWithResponse(ctx context.Context, id int, body PostApiProfilesIdJumpstartJSONRequestBody, reqEditors ...RequestEditorFn) (*PostApiProfilesIdJumpstartResponse, error) {
-	rsp, err := c.PostApiProfilesIdJumpstart(ctx, id, body, reqEditors...)
+func (c *ClientWithResponses) PostApiProfilesProfileIdJumpstartWithResponse(ctx context.Context, profileId int, body PostApiProfilesProfileIdJumpstartJSONRequestBody, reqEditors ...RequestEditorFn) (*PostApiProfilesProfileIdJumpstartResponse, error) {
+	rsp, err := c.PostApiProfilesProfileIdJumpstart(ctx, profileId, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
-	return ParsePostApiProfilesIdJumpstartResponse(rsp)
+	return ParsePostApiProfilesProfileIdJumpstartResponse(rsp)
 }
 
 // GetApiSourcesRedditSubredditsWithResponse request returning *GetApiSourcesRedditSubredditsResponse
@@ -1649,6 +1731,15 @@ func (c *ClientWithResponses) GetApiSourcesRedditSubredditsWithProfileWithRespon
 		return nil, err
 	}
 	return ParseGetApiSourcesRedditSubredditsWithProfileResponse(rsp)
+}
+
+// GetApiStatisticsProfileIdWithResponse request returning *GetApiStatisticsProfileIdResponse
+func (c *ClientWithResponses) GetApiStatisticsProfileIdWithResponse(ctx context.Context, profileId int, reqEditors ...RequestEditorFn) (*GetApiStatisticsProfileIdResponse, error) {
+	rsp, err := c.GetApiStatisticsProfileId(ctx, profileId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetApiStatisticsProfileIdResponse(rsp)
 }
 
 // ParsePostApiAnalyzeResponse parses an HTTP response from a PostApiAnalyzeWithResponse call
@@ -1818,15 +1909,15 @@ func ParsePostApiProfilesResponse(rsp *http.Response) (*PostApiProfilesResponse,
 	return response, nil
 }
 
-// ParseDeleteApiProfilesIdResponse parses an HTTP response from a DeleteApiProfilesIdWithResponse call
-func ParseDeleteApiProfilesIdResponse(rsp *http.Response) (*DeleteApiProfilesIdResponse, error) {
+// ParseDeleteApiProfilesProfileIdResponse parses an HTTP response from a DeleteApiProfilesProfileIdWithResponse call
+func ParseDeleteApiProfilesProfileIdResponse(rsp *http.Response) (*DeleteApiProfilesProfileIdResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
 	defer func() { _ = rsp.Body.Close() }()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &DeleteApiProfilesIdResponse{
+	response := &DeleteApiProfilesProfileIdResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
@@ -1844,15 +1935,15 @@ func ParseDeleteApiProfilesIdResponse(rsp *http.Response) (*DeleteApiProfilesIdR
 	return response, nil
 }
 
-// ParseGetApiProfilesIdResponse parses an HTTP response from a GetApiProfilesIdWithResponse call
-func ParseGetApiProfilesIdResponse(rsp *http.Response) (*GetApiProfilesIdResponse, error) {
+// ParseGetApiProfilesProfileIdResponse parses an HTTP response from a GetApiProfilesProfileIdWithResponse call
+func ParseGetApiProfilesProfileIdResponse(rsp *http.Response) (*GetApiProfilesProfileIdResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
 	defer func() { _ = rsp.Body.Close() }()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &GetApiProfilesIdResponse{
+	response := &GetApiProfilesProfileIdResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
@@ -1877,15 +1968,15 @@ func ParseGetApiProfilesIdResponse(rsp *http.Response) (*GetApiProfilesIdRespons
 	return response, nil
 }
 
-// ParsePutApiProfilesIdResponse parses an HTTP response from a PutApiProfilesIdWithResponse call
-func ParsePutApiProfilesIdResponse(rsp *http.Response) (*PutApiProfilesIdResponse, error) {
+// ParsePutApiProfilesProfileIdResponse parses an HTTP response from a PutApiProfilesProfileIdWithResponse call
+func ParsePutApiProfilesProfileIdResponse(rsp *http.Response) (*PutApiProfilesProfileIdResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
 	defer func() { _ = rsp.Body.Close() }()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &PutApiProfilesIdResponse{
+	response := &PutApiProfilesProfileIdResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
@@ -1903,15 +1994,15 @@ func ParsePutApiProfilesIdResponse(rsp *http.Response) (*PutApiProfilesIdRespons
 	return response, nil
 }
 
-// ParsePostApiProfilesIdJumpstartResponse parses an HTTP response from a PostApiProfilesIdJumpstartWithResponse call
-func ParsePostApiProfilesIdJumpstartResponse(rsp *http.Response) (*PostApiProfilesIdJumpstartResponse, error) {
+// ParsePostApiProfilesProfileIdJumpstartResponse parses an HTTP response from a PostApiProfilesProfileIdJumpstartWithResponse call
+func ParsePostApiProfilesProfileIdJumpstartResponse(rsp *http.Response) (*PostApiProfilesProfileIdJumpstartResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
 	defer func() { _ = rsp.Body.Close() }()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &PostApiProfilesIdJumpstartResponse{
+	response := &PostApiProfilesProfileIdJumpstartResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
@@ -2047,6 +2138,39 @@ func ParseGetApiSourcesRedditSubredditsWithProfileResponse(rsp *http.Response) (
 	return response, nil
 }
 
+// ParseGetApiStatisticsProfileIdResponse parses an HTTP response from a GetApiStatisticsProfileIdWithResponse call
+func ParseGetApiStatisticsProfileIdResponse(rsp *http.Response) (*GetApiStatisticsProfileIdResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetApiStatisticsProfileIdResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ProfileStatistics
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 	// Analyze a post
@@ -2065,17 +2189,17 @@ type ServerInterface interface {
 	// (POST /api/profiles)
 	PostApiProfiles(c *gin.Context)
 	// Delete a profile by ID
-	// (DELETE /api/profiles/{id})
-	DeleteApiProfilesId(c *gin.Context, id int)
+	// (DELETE /api/profiles/{profileId})
+	DeleteApiProfilesProfileId(c *gin.Context, profileId int)
 	// Get a profile by ID
-	// (GET /api/profiles/{id})
-	GetApiProfilesId(c *gin.Context, id int)
+	// (GET /api/profiles/{profileId})
+	GetApiProfilesProfileId(c *gin.Context, profileId int)
 	// Update a profile by ID
-	// (PUT /api/profiles/{id})
-	PutApiProfilesId(c *gin.Context, id int)
+	// (PUT /api/profiles/{profileId})
+	PutApiProfilesProfileId(c *gin.Context, profileId int)
 	// Jumpstart a profile - run analysis on old posts
-	// (POST /api/profiles/{id}/jumpstart)
-	PostApiProfilesIdJumpstart(c *gin.Context, id int)
+	// (POST /api/profiles/{profileId}/jumpstart)
+	PostApiProfilesProfileIdJumpstart(c *gin.Context, profileId int)
 	// Get all subreddits
 	// (GET /api/sources/reddit/subreddits)
 	GetApiSourcesRedditSubreddits(c *gin.Context)
@@ -2088,6 +2212,9 @@ type ServerInterface interface {
 	// Get all subreddits by profile
 	// (GET /api/sources/reddit/subreddits_with_profile)
 	GetApiSourcesRedditSubredditsWithProfile(c *gin.Context, params GetApiSourcesRedditSubredditsWithProfileParams)
+	// Get statistics for a profile
+	// (GET /api/statistics/{profileId})
+	GetApiStatisticsProfileId(c *gin.Context, profileId int)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -2174,17 +2301,17 @@ func (siw *ServerInterfaceWrapper) PostApiProfiles(c *gin.Context) {
 	siw.Handler.PostApiProfiles(c)
 }
 
-// DeleteApiProfilesId operation middleware
-func (siw *ServerInterfaceWrapper) DeleteApiProfilesId(c *gin.Context) {
+// DeleteApiProfilesProfileId operation middleware
+func (siw *ServerInterfaceWrapper) DeleteApiProfilesProfileId(c *gin.Context) {
 
 	var err error
 
-	// ------------- Path parameter "id" -------------
-	var id int
+	// ------------- Path parameter "profileId" -------------
+	var profileId int
 
-	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	err = runtime.BindStyledParameterWithOptions("simple", "profileId", c.Param("profileId"), &profileId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
 	if err != nil {
-		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter profileId: %w", err), http.StatusBadRequest)
 		return
 	}
 
@@ -2197,20 +2324,20 @@ func (siw *ServerInterfaceWrapper) DeleteApiProfilesId(c *gin.Context) {
 		}
 	}
 
-	siw.Handler.DeleteApiProfilesId(c, id)
+	siw.Handler.DeleteApiProfilesProfileId(c, profileId)
 }
 
-// GetApiProfilesId operation middleware
-func (siw *ServerInterfaceWrapper) GetApiProfilesId(c *gin.Context) {
+// GetApiProfilesProfileId operation middleware
+func (siw *ServerInterfaceWrapper) GetApiProfilesProfileId(c *gin.Context) {
 
 	var err error
 
-	// ------------- Path parameter "id" -------------
-	var id int
+	// ------------- Path parameter "profileId" -------------
+	var profileId int
 
-	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	err = runtime.BindStyledParameterWithOptions("simple", "profileId", c.Param("profileId"), &profileId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
 	if err != nil {
-		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter profileId: %w", err), http.StatusBadRequest)
 		return
 	}
 
@@ -2223,20 +2350,20 @@ func (siw *ServerInterfaceWrapper) GetApiProfilesId(c *gin.Context) {
 		}
 	}
 
-	siw.Handler.GetApiProfilesId(c, id)
+	siw.Handler.GetApiProfilesProfileId(c, profileId)
 }
 
-// PutApiProfilesId operation middleware
-func (siw *ServerInterfaceWrapper) PutApiProfilesId(c *gin.Context) {
+// PutApiProfilesProfileId operation middleware
+func (siw *ServerInterfaceWrapper) PutApiProfilesProfileId(c *gin.Context) {
 
 	var err error
 
-	// ------------- Path parameter "id" -------------
-	var id int
+	// ------------- Path parameter "profileId" -------------
+	var profileId int
 
-	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	err = runtime.BindStyledParameterWithOptions("simple", "profileId", c.Param("profileId"), &profileId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
 	if err != nil {
-		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter profileId: %w", err), http.StatusBadRequest)
 		return
 	}
 
@@ -2249,20 +2376,20 @@ func (siw *ServerInterfaceWrapper) PutApiProfilesId(c *gin.Context) {
 		}
 	}
 
-	siw.Handler.PutApiProfilesId(c, id)
+	siw.Handler.PutApiProfilesProfileId(c, profileId)
 }
 
-// PostApiProfilesIdJumpstart operation middleware
-func (siw *ServerInterfaceWrapper) PostApiProfilesIdJumpstart(c *gin.Context) {
+// PostApiProfilesProfileIdJumpstart operation middleware
+func (siw *ServerInterfaceWrapper) PostApiProfilesProfileIdJumpstart(c *gin.Context) {
 
 	var err error
 
-	// ------------- Path parameter "id" -------------
-	var id int
+	// ------------- Path parameter "profileId" -------------
+	var profileId int
 
-	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	err = runtime.BindStyledParameterWithOptions("simple", "profileId", c.Param("profileId"), &profileId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
 	if err != nil {
-		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter profileId: %w", err), http.StatusBadRequest)
 		return
 	}
 
@@ -2275,7 +2402,7 @@ func (siw *ServerInterfaceWrapper) PostApiProfilesIdJumpstart(c *gin.Context) {
 		}
 	}
 
-	siw.Handler.PostApiProfilesIdJumpstart(c, id)
+	siw.Handler.PostApiProfilesProfileIdJumpstart(c, profileId)
 }
 
 // GetApiSourcesRedditSubreddits operation middleware
@@ -2380,6 +2507,32 @@ func (siw *ServerInterfaceWrapper) GetApiSourcesRedditSubredditsWithProfile(c *g
 	siw.Handler.GetApiSourcesRedditSubredditsWithProfile(c, params)
 }
 
+// GetApiStatisticsProfileId operation middleware
+func (siw *ServerInterfaceWrapper) GetApiStatisticsProfileId(c *gin.Context) {
+
+	var err error
+
+	// ------------- Path parameter "profileId" -------------
+	var profileId int
+
+	err = runtime.BindStyledParameterWithOptions("simple", "profileId", c.Param("profileId"), &profileId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter profileId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	c.Set(BasicAuthScopes, []string{})
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetApiStatisticsProfileId(c, profileId)
+}
+
 // GinServerOptions provides options for the Gin server.
 type GinServerOptions struct {
 	BaseURL      string
@@ -2412,14 +2565,15 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.PUT(options.BaseURL+"/api/detections/tags", wrapper.PutApiDetectionsTags)
 	router.GET(options.BaseURL+"/api/profiles", wrapper.GetApiProfiles)
 	router.POST(options.BaseURL+"/api/profiles", wrapper.PostApiProfiles)
-	router.DELETE(options.BaseURL+"/api/profiles/:id", wrapper.DeleteApiProfilesId)
-	router.GET(options.BaseURL+"/api/profiles/:id", wrapper.GetApiProfilesId)
-	router.PUT(options.BaseURL+"/api/profiles/:id", wrapper.PutApiProfilesId)
-	router.POST(options.BaseURL+"/api/profiles/:id/jumpstart", wrapper.PostApiProfilesIdJumpstart)
+	router.DELETE(options.BaseURL+"/api/profiles/:profileId", wrapper.DeleteApiProfilesProfileId)
+	router.GET(options.BaseURL+"/api/profiles/:profileId", wrapper.GetApiProfilesProfileId)
+	router.PUT(options.BaseURL+"/api/profiles/:profileId", wrapper.PutApiProfilesProfileId)
+	router.POST(options.BaseURL+"/api/profiles/:profileId/jumpstart", wrapper.PostApiProfilesProfileIdJumpstart)
 	router.GET(options.BaseURL+"/api/sources/reddit/subreddits", wrapper.GetApiSourcesRedditSubreddits)
 	router.POST(options.BaseURL+"/api/sources/reddit/subreddits/:subreddit/add_profiles", wrapper.PostApiSourcesRedditSubredditsSubredditAddProfiles)
 	router.POST(options.BaseURL+"/api/sources/reddit/subreddits/:subreddit/remove_profiles", wrapper.PostApiSourcesRedditSubredditsSubredditRemoveProfiles)
 	router.GET(options.BaseURL+"/api/sources/reddit/subreddits_with_profile", wrapper.GetApiSourcesRedditSubredditsWithProfile)
+	router.GET(options.BaseURL+"/api/statistics/:profileId", wrapper.GetApiStatisticsProfileId)
 }
 
 type PostApiAnalyzeRequestObject struct {
@@ -2577,135 +2731,135 @@ func (response PostApiProfiles500JSONResponse) VisitPostApiProfilesResponse(w ht
 	return json.NewEncoder(w).Encode(response)
 }
 
-type DeleteApiProfilesIdRequestObject struct {
-	Id int `json:"id"`
+type DeleteApiProfilesProfileIdRequestObject struct {
+	ProfileId int `json:"profileId"`
 }
 
-type DeleteApiProfilesIdResponseObject interface {
-	VisitDeleteApiProfilesIdResponse(w http.ResponseWriter) error
+type DeleteApiProfilesProfileIdResponseObject interface {
+	VisitDeleteApiProfilesProfileIdResponse(w http.ResponseWriter) error
 }
 
-type DeleteApiProfilesId204Response struct {
+type DeleteApiProfilesProfileId204Response struct {
 }
 
-func (response DeleteApiProfilesId204Response) VisitDeleteApiProfilesIdResponse(w http.ResponseWriter) error {
+func (response DeleteApiProfilesProfileId204Response) VisitDeleteApiProfilesProfileIdResponse(w http.ResponseWriter) error {
 	w.WriteHeader(204)
 	return nil
 }
 
-type DeleteApiProfilesId404Response struct {
+type DeleteApiProfilesProfileId404Response struct {
 }
 
-func (response DeleteApiProfilesId404Response) VisitDeleteApiProfilesIdResponse(w http.ResponseWriter) error {
+func (response DeleteApiProfilesProfileId404Response) VisitDeleteApiProfilesProfileIdResponse(w http.ResponseWriter) error {
 	w.WriteHeader(404)
 	return nil
 }
 
-type DeleteApiProfilesId500JSONResponse Error
+type DeleteApiProfilesProfileId500JSONResponse Error
 
-func (response DeleteApiProfilesId500JSONResponse) VisitDeleteApiProfilesIdResponse(w http.ResponseWriter) error {
+func (response DeleteApiProfilesProfileId500JSONResponse) VisitDeleteApiProfilesProfileIdResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(500)
 
 	return json.NewEncoder(w).Encode(response)
 }
 
-type GetApiProfilesIdRequestObject struct {
-	Id int `json:"id"`
+type GetApiProfilesProfileIdRequestObject struct {
+	ProfileId int `json:"profileId"`
 }
 
-type GetApiProfilesIdResponseObject interface {
-	VisitGetApiProfilesIdResponse(w http.ResponseWriter) error
+type GetApiProfilesProfileIdResponseObject interface {
+	VisitGetApiProfilesProfileIdResponse(w http.ResponseWriter) error
 }
 
-type GetApiProfilesId200JSONResponse Profile
+type GetApiProfilesProfileId200JSONResponse Profile
 
-func (response GetApiProfilesId200JSONResponse) VisitGetApiProfilesIdResponse(w http.ResponseWriter) error {
+func (response GetApiProfilesProfileId200JSONResponse) VisitGetApiProfilesProfileIdResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
 
 	return json.NewEncoder(w).Encode(response)
 }
 
-type GetApiProfilesId404Response struct {
+type GetApiProfilesProfileId404Response struct {
 }
 
-func (response GetApiProfilesId404Response) VisitGetApiProfilesIdResponse(w http.ResponseWriter) error {
+func (response GetApiProfilesProfileId404Response) VisitGetApiProfilesProfileIdResponse(w http.ResponseWriter) error {
 	w.WriteHeader(404)
 	return nil
 }
 
-type GetApiProfilesId500JSONResponse Error
+type GetApiProfilesProfileId500JSONResponse Error
 
-func (response GetApiProfilesId500JSONResponse) VisitGetApiProfilesIdResponse(w http.ResponseWriter) error {
+func (response GetApiProfilesProfileId500JSONResponse) VisitGetApiProfilesProfileIdResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(500)
 
 	return json.NewEncoder(w).Encode(response)
 }
 
-type PutApiProfilesIdRequestObject struct {
-	Id   int `json:"id"`
-	Body *PutApiProfilesIdJSONRequestBody
+type PutApiProfilesProfileIdRequestObject struct {
+	ProfileId int `json:"profileId"`
+	Body      *PutApiProfilesProfileIdJSONRequestBody
 }
 
-type PutApiProfilesIdResponseObject interface {
-	VisitPutApiProfilesIdResponse(w http.ResponseWriter) error
+type PutApiProfilesProfileIdResponseObject interface {
+	VisitPutApiProfilesProfileIdResponse(w http.ResponseWriter) error
 }
 
-type PutApiProfilesId200Response struct {
+type PutApiProfilesProfileId200Response struct {
 }
 
-func (response PutApiProfilesId200Response) VisitPutApiProfilesIdResponse(w http.ResponseWriter) error {
+func (response PutApiProfilesProfileId200Response) VisitPutApiProfilesProfileIdResponse(w http.ResponseWriter) error {
 	w.WriteHeader(200)
 	return nil
 }
 
-type PutApiProfilesId404Response struct {
+type PutApiProfilesProfileId404Response struct {
 }
 
-func (response PutApiProfilesId404Response) VisitPutApiProfilesIdResponse(w http.ResponseWriter) error {
+func (response PutApiProfilesProfileId404Response) VisitPutApiProfilesProfileIdResponse(w http.ResponseWriter) error {
 	w.WriteHeader(404)
 	return nil
 }
 
-type PutApiProfilesId500JSONResponse Error
+type PutApiProfilesProfileId500JSONResponse Error
 
-func (response PutApiProfilesId500JSONResponse) VisitPutApiProfilesIdResponse(w http.ResponseWriter) error {
+func (response PutApiProfilesProfileId500JSONResponse) VisitPutApiProfilesProfileIdResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(500)
 
 	return json.NewEncoder(w).Encode(response)
 }
 
-type PostApiProfilesIdJumpstartRequestObject struct {
-	Id   int `json:"id"`
-	Body *PostApiProfilesIdJumpstartJSONRequestBody
+type PostApiProfilesProfileIdJumpstartRequestObject struct {
+	ProfileId int `json:"profileId"`
+	Body      *PostApiProfilesProfileIdJumpstartJSONRequestBody
 }
 
-type PostApiProfilesIdJumpstartResponseObject interface {
-	VisitPostApiProfilesIdJumpstartResponse(w http.ResponseWriter) error
+type PostApiProfilesProfileIdJumpstartResponseObject interface {
+	VisitPostApiProfilesProfileIdJumpstartResponse(w http.ResponseWriter) error
 }
 
-type PostApiProfilesIdJumpstart204Response struct {
+type PostApiProfilesProfileIdJumpstart204Response struct {
 }
 
-func (response PostApiProfilesIdJumpstart204Response) VisitPostApiProfilesIdJumpstartResponse(w http.ResponseWriter) error {
+func (response PostApiProfilesProfileIdJumpstart204Response) VisitPostApiProfilesProfileIdJumpstartResponse(w http.ResponseWriter) error {
 	w.WriteHeader(204)
 	return nil
 }
 
-type PostApiProfilesIdJumpstart404Response struct {
+type PostApiProfilesProfileIdJumpstart404Response struct {
 }
 
-func (response PostApiProfilesIdJumpstart404Response) VisitPostApiProfilesIdJumpstartResponse(w http.ResponseWriter) error {
+func (response PostApiProfilesProfileIdJumpstart404Response) VisitPostApiProfilesProfileIdJumpstartResponse(w http.ResponseWriter) error {
 	w.WriteHeader(404)
 	return nil
 }
 
-type PostApiProfilesIdJumpstart500JSONResponse Error
+type PostApiProfilesProfileIdJumpstart500JSONResponse Error
 
-func (response PostApiProfilesIdJumpstart500JSONResponse) VisitPostApiProfilesIdJumpstartResponse(w http.ResponseWriter) error {
+func (response PostApiProfilesProfileIdJumpstart500JSONResponse) VisitPostApiProfilesProfileIdJumpstartResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(500)
 
@@ -2863,6 +3017,48 @@ func (response GetApiSourcesRedditSubredditsWithProfile500JSONResponse) VisitGet
 	return json.NewEncoder(w).Encode(response)
 }
 
+type GetApiStatisticsProfileIdRequestObject struct {
+	ProfileId int `json:"profileId"`
+}
+
+type GetApiStatisticsProfileIdResponseObject interface {
+	VisitGetApiStatisticsProfileIdResponse(w http.ResponseWriter) error
+}
+
+type GetApiStatisticsProfileId200JSONResponse ProfileStatistics
+
+func (response GetApiStatisticsProfileId200JSONResponse) VisitGetApiStatisticsProfileIdResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetApiStatisticsProfileId401Response struct {
+}
+
+func (response GetApiStatisticsProfileId401Response) VisitGetApiStatisticsProfileIdResponse(w http.ResponseWriter) error {
+	w.WriteHeader(401)
+	return nil
+}
+
+type GetApiStatisticsProfileId404Response struct {
+}
+
+func (response GetApiStatisticsProfileId404Response) VisitGetApiStatisticsProfileIdResponse(w http.ResponseWriter) error {
+	w.WriteHeader(404)
+	return nil
+}
+
+type GetApiStatisticsProfileId500JSONResponse Error
+
+func (response GetApiStatisticsProfileId500JSONResponse) VisitGetApiStatisticsProfileIdResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
 	// Analyze a post
@@ -2881,17 +3077,17 @@ type StrictServerInterface interface {
 	// (POST /api/profiles)
 	PostApiProfiles(ctx context.Context, request PostApiProfilesRequestObject) (PostApiProfilesResponseObject, error)
 	// Delete a profile by ID
-	// (DELETE /api/profiles/{id})
-	DeleteApiProfilesId(ctx context.Context, request DeleteApiProfilesIdRequestObject) (DeleteApiProfilesIdResponseObject, error)
+	// (DELETE /api/profiles/{profileId})
+	DeleteApiProfilesProfileId(ctx context.Context, request DeleteApiProfilesProfileIdRequestObject) (DeleteApiProfilesProfileIdResponseObject, error)
 	// Get a profile by ID
-	// (GET /api/profiles/{id})
-	GetApiProfilesId(ctx context.Context, request GetApiProfilesIdRequestObject) (GetApiProfilesIdResponseObject, error)
+	// (GET /api/profiles/{profileId})
+	GetApiProfilesProfileId(ctx context.Context, request GetApiProfilesProfileIdRequestObject) (GetApiProfilesProfileIdResponseObject, error)
 	// Update a profile by ID
-	// (PUT /api/profiles/{id})
-	PutApiProfilesId(ctx context.Context, request PutApiProfilesIdRequestObject) (PutApiProfilesIdResponseObject, error)
+	// (PUT /api/profiles/{profileId})
+	PutApiProfilesProfileId(ctx context.Context, request PutApiProfilesProfileIdRequestObject) (PutApiProfilesProfileIdResponseObject, error)
 	// Jumpstart a profile - run analysis on old posts
-	// (POST /api/profiles/{id}/jumpstart)
-	PostApiProfilesIdJumpstart(ctx context.Context, request PostApiProfilesIdJumpstartRequestObject) (PostApiProfilesIdJumpstartResponseObject, error)
+	// (POST /api/profiles/{profileId}/jumpstart)
+	PostApiProfilesProfileIdJumpstart(ctx context.Context, request PostApiProfilesProfileIdJumpstartRequestObject) (PostApiProfilesProfileIdJumpstartResponseObject, error)
 	// Get all subreddits
 	// (GET /api/sources/reddit/subreddits)
 	GetApiSourcesRedditSubreddits(ctx context.Context, request GetApiSourcesRedditSubredditsRequestObject) (GetApiSourcesRedditSubredditsResponseObject, error)
@@ -2904,6 +3100,9 @@ type StrictServerInterface interface {
 	// Get all subreddits by profile
 	// (GET /api/sources/reddit/subreddits_with_profile)
 	GetApiSourcesRedditSubredditsWithProfile(ctx context.Context, request GetApiSourcesRedditSubredditsWithProfileRequestObject) (GetApiSourcesRedditSubredditsWithProfileResponseObject, error)
+	// Get statistics for a profile
+	// (GET /api/statistics/{profileId})
+	GetApiStatisticsProfileId(ctx context.Context, request GetApiStatisticsProfileIdRequestObject) (GetApiStatisticsProfileIdResponseObject, error)
 }
 
 type StrictHandlerFunc = strictgin.StrictGinHandlerFunc
@@ -3075,17 +3274,17 @@ func (sh *strictHandler) PostApiProfiles(ctx *gin.Context) {
 	}
 }
 
-// DeleteApiProfilesId operation middleware
-func (sh *strictHandler) DeleteApiProfilesId(ctx *gin.Context, id int) {
-	var request DeleteApiProfilesIdRequestObject
+// DeleteApiProfilesProfileId operation middleware
+func (sh *strictHandler) DeleteApiProfilesProfileId(ctx *gin.Context, profileId int) {
+	var request DeleteApiProfilesProfileIdRequestObject
 
-	request.Id = id
+	request.ProfileId = profileId
 
 	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
-		return sh.ssi.DeleteApiProfilesId(ctx, request.(DeleteApiProfilesIdRequestObject))
+		return sh.ssi.DeleteApiProfilesProfileId(ctx, request.(DeleteApiProfilesProfileIdRequestObject))
 	}
 	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "DeleteApiProfilesId")
+		handler = middleware(handler, "DeleteApiProfilesProfileId")
 	}
 
 	response, err := handler(ctx, request)
@@ -3093,8 +3292,8 @@ func (sh *strictHandler) DeleteApiProfilesId(ctx *gin.Context, id int) {
 	if err != nil {
 		ctx.Error(err)
 		ctx.Status(http.StatusInternalServerError)
-	} else if validResponse, ok := response.(DeleteApiProfilesIdResponseObject); ok {
-		if err := validResponse.VisitDeleteApiProfilesIdResponse(ctx.Writer); err != nil {
+	} else if validResponse, ok := response.(DeleteApiProfilesProfileIdResponseObject); ok {
+		if err := validResponse.VisitDeleteApiProfilesProfileIdResponse(ctx.Writer); err != nil {
 			ctx.Error(err)
 		}
 	} else if response != nil {
@@ -3102,17 +3301,17 @@ func (sh *strictHandler) DeleteApiProfilesId(ctx *gin.Context, id int) {
 	}
 }
 
-// GetApiProfilesId operation middleware
-func (sh *strictHandler) GetApiProfilesId(ctx *gin.Context, id int) {
-	var request GetApiProfilesIdRequestObject
+// GetApiProfilesProfileId operation middleware
+func (sh *strictHandler) GetApiProfilesProfileId(ctx *gin.Context, profileId int) {
+	var request GetApiProfilesProfileIdRequestObject
 
-	request.Id = id
+	request.ProfileId = profileId
 
 	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
-		return sh.ssi.GetApiProfilesId(ctx, request.(GetApiProfilesIdRequestObject))
+		return sh.ssi.GetApiProfilesProfileId(ctx, request.(GetApiProfilesProfileIdRequestObject))
 	}
 	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "GetApiProfilesId")
+		handler = middleware(handler, "GetApiProfilesProfileId")
 	}
 
 	response, err := handler(ctx, request)
@@ -3120,8 +3319,8 @@ func (sh *strictHandler) GetApiProfilesId(ctx *gin.Context, id int) {
 	if err != nil {
 		ctx.Error(err)
 		ctx.Status(http.StatusInternalServerError)
-	} else if validResponse, ok := response.(GetApiProfilesIdResponseObject); ok {
-		if err := validResponse.VisitGetApiProfilesIdResponse(ctx.Writer); err != nil {
+	} else if validResponse, ok := response.(GetApiProfilesProfileIdResponseObject); ok {
+		if err := validResponse.VisitGetApiProfilesProfileIdResponse(ctx.Writer); err != nil {
 			ctx.Error(err)
 		}
 	} else if response != nil {
@@ -3129,13 +3328,13 @@ func (sh *strictHandler) GetApiProfilesId(ctx *gin.Context, id int) {
 	}
 }
 
-// PutApiProfilesId operation middleware
-func (sh *strictHandler) PutApiProfilesId(ctx *gin.Context, id int) {
-	var request PutApiProfilesIdRequestObject
+// PutApiProfilesProfileId operation middleware
+func (sh *strictHandler) PutApiProfilesProfileId(ctx *gin.Context, profileId int) {
+	var request PutApiProfilesProfileIdRequestObject
 
-	request.Id = id
+	request.ProfileId = profileId
 
-	var body PutApiProfilesIdJSONRequestBody
+	var body PutApiProfilesProfileIdJSONRequestBody
 	if err := ctx.ShouldBindJSON(&body); err != nil {
 		ctx.Status(http.StatusBadRequest)
 		ctx.Error(err)
@@ -3144,10 +3343,10 @@ func (sh *strictHandler) PutApiProfilesId(ctx *gin.Context, id int) {
 	request.Body = &body
 
 	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
-		return sh.ssi.PutApiProfilesId(ctx, request.(PutApiProfilesIdRequestObject))
+		return sh.ssi.PutApiProfilesProfileId(ctx, request.(PutApiProfilesProfileIdRequestObject))
 	}
 	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "PutApiProfilesId")
+		handler = middleware(handler, "PutApiProfilesProfileId")
 	}
 
 	response, err := handler(ctx, request)
@@ -3155,8 +3354,8 @@ func (sh *strictHandler) PutApiProfilesId(ctx *gin.Context, id int) {
 	if err != nil {
 		ctx.Error(err)
 		ctx.Status(http.StatusInternalServerError)
-	} else if validResponse, ok := response.(PutApiProfilesIdResponseObject); ok {
-		if err := validResponse.VisitPutApiProfilesIdResponse(ctx.Writer); err != nil {
+	} else if validResponse, ok := response.(PutApiProfilesProfileIdResponseObject); ok {
+		if err := validResponse.VisitPutApiProfilesProfileIdResponse(ctx.Writer); err != nil {
 			ctx.Error(err)
 		}
 	} else if response != nil {
@@ -3164,13 +3363,13 @@ func (sh *strictHandler) PutApiProfilesId(ctx *gin.Context, id int) {
 	}
 }
 
-// PostApiProfilesIdJumpstart operation middleware
-func (sh *strictHandler) PostApiProfilesIdJumpstart(ctx *gin.Context, id int) {
-	var request PostApiProfilesIdJumpstartRequestObject
+// PostApiProfilesProfileIdJumpstart operation middleware
+func (sh *strictHandler) PostApiProfilesProfileIdJumpstart(ctx *gin.Context, profileId int) {
+	var request PostApiProfilesProfileIdJumpstartRequestObject
 
-	request.Id = id
+	request.ProfileId = profileId
 
-	var body PostApiProfilesIdJumpstartJSONRequestBody
+	var body PostApiProfilesProfileIdJumpstartJSONRequestBody
 	if err := ctx.ShouldBindJSON(&body); err != nil {
 		ctx.Status(http.StatusBadRequest)
 		ctx.Error(err)
@@ -3179,10 +3378,10 @@ func (sh *strictHandler) PostApiProfilesIdJumpstart(ctx *gin.Context, id int) {
 	request.Body = &body
 
 	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
-		return sh.ssi.PostApiProfilesIdJumpstart(ctx, request.(PostApiProfilesIdJumpstartRequestObject))
+		return sh.ssi.PostApiProfilesProfileIdJumpstart(ctx, request.(PostApiProfilesProfileIdJumpstartRequestObject))
 	}
 	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "PostApiProfilesIdJumpstart")
+		handler = middleware(handler, "PostApiProfilesProfileIdJumpstart")
 	}
 
 	response, err := handler(ctx, request)
@@ -3190,8 +3389,8 @@ func (sh *strictHandler) PostApiProfilesIdJumpstart(ctx *gin.Context, id int) {
 	if err != nil {
 		ctx.Error(err)
 		ctx.Status(http.StatusInternalServerError)
-	} else if validResponse, ok := response.(PostApiProfilesIdJumpstartResponseObject); ok {
-		if err := validResponse.VisitPostApiProfilesIdJumpstartResponse(ctx.Writer); err != nil {
+	} else if validResponse, ok := response.(PostApiProfilesProfileIdJumpstartResponseObject); ok {
+		if err := validResponse.VisitPostApiProfilesProfileIdJumpstartResponse(ctx.Writer); err != nil {
 			ctx.Error(err)
 		}
 	} else if response != nil {
@@ -3321,36 +3520,65 @@ func (sh *strictHandler) GetApiSourcesRedditSubredditsWithProfile(ctx *gin.Conte
 	}
 }
 
+// GetApiStatisticsProfileId operation middleware
+func (sh *strictHandler) GetApiStatisticsProfileId(ctx *gin.Context, profileId int) {
+	var request GetApiStatisticsProfileIdRequestObject
+
+	request.ProfileId = profileId
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.GetApiStatisticsProfileId(ctx, request.(GetApiStatisticsProfileIdRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetApiStatisticsProfileId")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(GetApiStatisticsProfileIdResponseObject); ok {
+		if err := validResponse.VisitGetApiStatisticsProfileIdResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
+	"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",
+	"C2Vw8vqn8WGyPl//EwAA//9XeSxOdi4AAA==",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file
