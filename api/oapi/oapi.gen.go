@@ -37,15 +37,13 @@ type AnalyzeRequest struct {
 
 // Detection defines model for Detection.
 type Detection struct {
-	CreatedAt      string            `json:"created_at"`
-	Id             int               `json:"id"`
-	IsRelevant     bool              `json:"is_relevant"`
-	ProfileId      int               `json:"profile_id"`
-	ProfileVersion int               `json:"profile_version"`
-	Properties     map[string]string `json:"properties"`
-	Source         string            `json:"source"`
-	SourceId       string            `json:"source_id"`
-	TestMode       *bool             `json:"test_mode,omitempty"`
+	CreatedAt  string            `json:"created_at"`
+	Id         int               `json:"id"`
+	IsRelevant bool              `json:"is_relevant"`
+	ProfileId  int               `json:"profile_id"`
+	Properties map[string]string `json:"properties"`
+	Source     string            `json:"source"`
+	SourceId   string            `json:"source_id"`
 }
 
 // DetectionFilter defines model for DetectionFilter.
@@ -54,7 +52,6 @@ type DetectionFilter struct {
 	Profiles   *[]int               `json:"profiles,omitempty"`
 	Sources    *[]string            `json:"sources,omitempty"`
 	Tags       *DetectionTagsFilter `json:"tags,omitempty"`
-	Versions   *[]int               `json:"versions,omitempty"`
 }
 
 // DetectionListRequest defines model for DetectionListRequest.
@@ -96,12 +93,12 @@ type ListedDetection struct {
 
 // Profile defines model for Profile.
 type Profile struct {
-	CreatedAt       *string           `json:"created_at,omitempty"`
-	Id              int               `json:"id"`
-	Name            string            `json:"name"`
-	SelectedVersion *int              `json:"selected_version,omitempty"`
-	UpdatedAt       *string           `json:"updated_at,omitempty"`
-	Versions        *[]ProfileVersion `json:"versions,omitempty"`
+	CreatedAt       *string                     `json:"created_at,omitempty"`
+	DefaultSettings *ProfileSettings            `json:"default_settings,omitempty"`
+	Id              int                         `json:"id"`
+	Name            string                      `json:"name"`
+	SourcesSettings *map[string]ProfileSettings `json:"sources_settings,omitempty"`
+	UpdatedAt       *string                     `json:"updated_at,omitempty"`
 }
 
 // ProfileJumpstartRequest defines model for ProfileJumpstartRequest.
@@ -118,29 +115,23 @@ type ProfileJumpstartRequest struct {
 
 // ProfileSettings defines model for ProfileSettings.
 type ProfileSettings struct {
+	CreatedAt           *string           `json:"created_at,omitempty"`
 	ExtractedProperties map[string]string `json:"extracted_properties"`
 	RelevancyFilter     string            `json:"relevancy_filter"`
+	UpdatedAt           *string           `json:"updated_at,omitempty"`
+}
+
+// ProfileSettingsUpdate defines model for ProfileSettingsUpdate.
+type ProfileSettingsUpdate struct {
+	ExtractedProperties *map[string]*string `json:"extracted_properties,omitempty"`
+	RelevancyFilter     *string             `json:"relevancy_filter,omitempty"`
 }
 
 // ProfileUpdate defines model for ProfileUpdate.
 type ProfileUpdate struct {
-	Name *string `json:"name,omitempty"`
-}
-
-// ProfileVersion defines model for ProfileVersion.
-type ProfileVersion struct {
-	CreatedAt       string                             `json:"created_at"`
-	DefaultSettings nullable.Nullable[ProfileSettings] `json:"default_settings,omitempty"`
-	SourcesSettings *map[string]*ProfileSettings       `json:"sources_settings,omitempty"`
-	TestMode        *bool                              `json:"test_mode,omitempty"`
-	UpdatedAt       string                             `json:"updated_at"`
-	Version         int                                `json:"version"`
-}
-
-// ProfileVersionUpdate defines model for ProfileVersionUpdate.
-type ProfileVersionUpdate struct {
-	DefaultSettings nullable.Nullable[ProfileSettings] `json:"default_settings,omitempty"`
-	SourcesSettings *map[string]*ProfileSettings       `json:"sources_settings,omitempty"`
+	DefaultSettings nullable.Nullable[ProfileSettingsUpdate] `json:"default_settings,omitempty"`
+	Name            *string                                  `json:"name,omitempty"`
+	SourcesSettings *map[string]*ProfileSettingsUpdate       `json:"sources_settings,omitempty"`
 }
 
 // SubredditSettings defines model for SubredditSettings.
@@ -181,12 +172,6 @@ type PutApiProfilesIdJSONRequestBody = ProfileUpdate
 
 // PostApiProfilesIdJumpstartJSONRequestBody defines body for PostApiProfilesIdJumpstart for application/json ContentType.
 type PostApiProfilesIdJumpstartJSONRequestBody = ProfileJumpstartRequest
-
-// PostApiProfilesIdVersionJSONRequestBody defines body for PostApiProfilesIdVersion for application/json ContentType.
-type PostApiProfilesIdVersionJSONRequestBody = ProfileVersion
-
-// PutApiProfilesIdVersionVersionJSONRequestBody defines body for PutApiProfilesIdVersionVersion for application/json ContentType.
-type PutApiProfilesIdVersionVersionJSONRequestBody = ProfileVersionUpdate
 
 // PostApiSourcesRedditSubredditsSubredditAddProfilesJSONRequestBody defines body for PostApiSourcesRedditSubredditsSubredditAddProfiles for application/json ContentType.
 type PostApiSourcesRedditSubredditsSubredditAddProfilesJSONRequestBody PostApiSourcesRedditSubredditsSubredditAddProfilesJSONBody
@@ -305,19 +290,6 @@ type ClientInterface interface {
 	PostApiProfilesIdJumpstartWithBody(ctx context.Context, id int, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	PostApiProfilesIdJumpstart(ctx context.Context, id int, body PostApiProfilesIdJumpstartJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// PostApiProfilesIdVersionWithBody request with any body
-	PostApiProfilesIdVersionWithBody(ctx context.Context, id int, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	PostApiProfilesIdVersion(ctx context.Context, id int, body PostApiProfilesIdVersionJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// PutApiProfilesIdVersionVersionWithBody request with any body
-	PutApiProfilesIdVersionVersionWithBody(ctx context.Context, id int, version int, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	PutApiProfilesIdVersionVersion(ctx context.Context, id int, version int, body PutApiProfilesIdVersionVersionJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// PostApiProfilesIdVersionVersionDeploy request
-	PostApiProfilesIdVersionVersionDeploy(ctx context.Context, id int, version int, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetApiSourcesRedditSubreddits request
 	GetApiSourcesRedditSubreddits(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -506,66 +478,6 @@ func (c *Client) PostApiProfilesIdJumpstartWithBody(ctx context.Context, id int,
 
 func (c *Client) PostApiProfilesIdJumpstart(ctx context.Context, id int, body PostApiProfilesIdJumpstartJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewPostApiProfilesIdJumpstartRequest(c.Server, id, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) PostApiProfilesIdVersionWithBody(ctx context.Context, id int, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewPostApiProfilesIdVersionRequestWithBody(c.Server, id, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) PostApiProfilesIdVersion(ctx context.Context, id int, body PostApiProfilesIdVersionJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewPostApiProfilesIdVersionRequest(c.Server, id, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) PutApiProfilesIdVersionVersionWithBody(ctx context.Context, id int, version int, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewPutApiProfilesIdVersionVersionRequestWithBody(c.Server, id, version, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) PutApiProfilesIdVersionVersion(ctx context.Context, id int, version int, body PutApiProfilesIdVersionVersionJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewPutApiProfilesIdVersionVersionRequest(c.Server, id, version, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) PostApiProfilesIdVersionVersionDeploy(ctx context.Context, id int, version int, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewPostApiProfilesIdVersionVersionDeployRequest(c.Server, id, version)
 	if err != nil {
 		return nil, err
 	}
@@ -997,148 +909,6 @@ func NewPostApiProfilesIdJumpstartRequestWithBody(server string, id int, content
 	return req, nil
 }
 
-// NewPostApiProfilesIdVersionRequest calls the generic PostApiProfilesIdVersion builder with application/json body
-func NewPostApiProfilesIdVersionRequest(server string, id int, body PostApiProfilesIdVersionJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewPostApiProfilesIdVersionRequestWithBody(server, id, "application/json", bodyReader)
-}
-
-// NewPostApiProfilesIdVersionRequestWithBody generates requests for PostApiProfilesIdVersion with any type of body
-func NewPostApiProfilesIdVersionRequestWithBody(server string, id int, contentType string, body io.Reader) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/api/profiles/%s/version", pathParam0)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("POST", queryURL.String(), body)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Add("Content-Type", contentType)
-
-	return req, nil
-}
-
-// NewPutApiProfilesIdVersionVersionRequest calls the generic PutApiProfilesIdVersionVersion builder with application/json body
-func NewPutApiProfilesIdVersionVersionRequest(server string, id int, version int, body PutApiProfilesIdVersionVersionJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewPutApiProfilesIdVersionVersionRequestWithBody(server, id, version, "application/json", bodyReader)
-}
-
-// NewPutApiProfilesIdVersionVersionRequestWithBody generates requests for PutApiProfilesIdVersionVersion with any type of body
-func NewPutApiProfilesIdVersionVersionRequestWithBody(server string, id int, version int, contentType string, body io.Reader) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
-	if err != nil {
-		return nil, err
-	}
-
-	var pathParam1 string
-
-	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "version", runtime.ParamLocationPath, version)
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/api/profiles/%s/version/%s", pathParam0, pathParam1)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("PUT", queryURL.String(), body)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Add("Content-Type", contentType)
-
-	return req, nil
-}
-
-// NewPostApiProfilesIdVersionVersionDeployRequest generates requests for PostApiProfilesIdVersionVersionDeploy
-func NewPostApiProfilesIdVersionVersionDeployRequest(server string, id int, version int) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
-	if err != nil {
-		return nil, err
-	}
-
-	var pathParam1 string
-
-	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "version", runtime.ParamLocationPath, version)
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/api/profiles/%s/version/%s/deploy", pathParam0, pathParam1)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("POST", queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
-}
-
 // NewGetApiSourcesRedditSubredditsRequest generates requests for GetApiSourcesRedditSubreddits
 func NewGetApiSourcesRedditSubredditsRequest(server string) (*http.Request, error) {
 	var err error
@@ -1387,19 +1157,6 @@ type ClientWithResponsesInterface interface {
 
 	PostApiProfilesIdJumpstartWithResponse(ctx context.Context, id int, body PostApiProfilesIdJumpstartJSONRequestBody, reqEditors ...RequestEditorFn) (*PostApiProfilesIdJumpstartResponse, error)
 
-	// PostApiProfilesIdVersionWithBodyWithResponse request with any body
-	PostApiProfilesIdVersionWithBodyWithResponse(ctx context.Context, id int, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PostApiProfilesIdVersionResponse, error)
-
-	PostApiProfilesIdVersionWithResponse(ctx context.Context, id int, body PostApiProfilesIdVersionJSONRequestBody, reqEditors ...RequestEditorFn) (*PostApiProfilesIdVersionResponse, error)
-
-	// PutApiProfilesIdVersionVersionWithBodyWithResponse request with any body
-	PutApiProfilesIdVersionVersionWithBodyWithResponse(ctx context.Context, id int, version int, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutApiProfilesIdVersionVersionResponse, error)
-
-	PutApiProfilesIdVersionVersionWithResponse(ctx context.Context, id int, version int, body PutApiProfilesIdVersionVersionJSONRequestBody, reqEditors ...RequestEditorFn) (*PutApiProfilesIdVersionVersionResponse, error)
-
-	// PostApiProfilesIdVersionVersionDeployWithResponse request
-	PostApiProfilesIdVersionVersionDeployWithResponse(ctx context.Context, id int, version int, reqEditors ...RequestEditorFn) (*PostApiProfilesIdVersionVersionDeployResponse, error)
-
 	// GetApiSourcesRedditSubredditsWithResponse request
 	GetApiSourcesRedditSubredditsWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetApiSourcesRedditSubredditsResponse, error)
 
@@ -1623,75 +1380,6 @@ func (r PostApiProfilesIdJumpstartResponse) StatusCode() int {
 	return 0
 }
 
-type PostApiProfilesIdVersionResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *struct {
-		Id int `json:"id"`
-	}
-	JSON500 *Error
-}
-
-// Status returns HTTPResponse.Status
-func (r PostApiProfilesIdVersionResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r PostApiProfilesIdVersionResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-type PutApiProfilesIdVersionVersionResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON500      *Error
-}
-
-// Status returns HTTPResponse.Status
-func (r PutApiProfilesIdVersionVersionResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r PutApiProfilesIdVersionVersionResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-type PostApiProfilesIdVersionVersionDeployResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON500      *Error
-}
-
-// Status returns HTTPResponse.Status
-func (r PostApiProfilesIdVersionVersionDeployResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r PostApiProfilesIdVersionVersionDeployResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
 type GetApiSourcesRedditSubredditsResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -1909,49 +1597,6 @@ func (c *ClientWithResponses) PostApiProfilesIdJumpstartWithResponse(ctx context
 		return nil, err
 	}
 	return ParsePostApiProfilesIdJumpstartResponse(rsp)
-}
-
-// PostApiProfilesIdVersionWithBodyWithResponse request with arbitrary body returning *PostApiProfilesIdVersionResponse
-func (c *ClientWithResponses) PostApiProfilesIdVersionWithBodyWithResponse(ctx context.Context, id int, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PostApiProfilesIdVersionResponse, error) {
-	rsp, err := c.PostApiProfilesIdVersionWithBody(ctx, id, contentType, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParsePostApiProfilesIdVersionResponse(rsp)
-}
-
-func (c *ClientWithResponses) PostApiProfilesIdVersionWithResponse(ctx context.Context, id int, body PostApiProfilesIdVersionJSONRequestBody, reqEditors ...RequestEditorFn) (*PostApiProfilesIdVersionResponse, error) {
-	rsp, err := c.PostApiProfilesIdVersion(ctx, id, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParsePostApiProfilesIdVersionResponse(rsp)
-}
-
-// PutApiProfilesIdVersionVersionWithBodyWithResponse request with arbitrary body returning *PutApiProfilesIdVersionVersionResponse
-func (c *ClientWithResponses) PutApiProfilesIdVersionVersionWithBodyWithResponse(ctx context.Context, id int, version int, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutApiProfilesIdVersionVersionResponse, error) {
-	rsp, err := c.PutApiProfilesIdVersionVersionWithBody(ctx, id, version, contentType, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParsePutApiProfilesIdVersionVersionResponse(rsp)
-}
-
-func (c *ClientWithResponses) PutApiProfilesIdVersionVersionWithResponse(ctx context.Context, id int, version int, body PutApiProfilesIdVersionVersionJSONRequestBody, reqEditors ...RequestEditorFn) (*PutApiProfilesIdVersionVersionResponse, error) {
-	rsp, err := c.PutApiProfilesIdVersionVersion(ctx, id, version, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParsePutApiProfilesIdVersionVersionResponse(rsp)
-}
-
-// PostApiProfilesIdVersionVersionDeployWithResponse request returning *PostApiProfilesIdVersionVersionDeployResponse
-func (c *ClientWithResponses) PostApiProfilesIdVersionVersionDeployWithResponse(ctx context.Context, id int, version int, reqEditors ...RequestEditorFn) (*PostApiProfilesIdVersionVersionDeployResponse, error) {
-	rsp, err := c.PostApiProfilesIdVersionVersionDeploy(ctx, id, version, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParsePostApiProfilesIdVersionVersionDeployResponse(rsp)
 }
 
 // GetApiSourcesRedditSubredditsWithResponse request returning *GetApiSourcesRedditSubredditsResponse
@@ -2284,93 +1929,6 @@ func ParsePostApiProfilesIdJumpstartResponse(rsp *http.Response) (*PostApiProfil
 	return response, nil
 }
 
-// ParsePostApiProfilesIdVersionResponse parses an HTTP response from a PostApiProfilesIdVersionWithResponse call
-func ParsePostApiProfilesIdVersionResponse(rsp *http.Response) (*PostApiProfilesIdVersionResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &PostApiProfilesIdVersionResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest struct {
-			Id int `json:"id"`
-		}
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest Error
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON500 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParsePutApiProfilesIdVersionVersionResponse parses an HTTP response from a PutApiProfilesIdVersionVersionWithResponse call
-func ParsePutApiProfilesIdVersionVersionResponse(rsp *http.Response) (*PutApiProfilesIdVersionVersionResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &PutApiProfilesIdVersionVersionResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest Error
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON500 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParsePostApiProfilesIdVersionVersionDeployResponse parses an HTTP response from a PostApiProfilesIdVersionVersionDeployWithResponse call
-func ParsePostApiProfilesIdVersionVersionDeployResponse(rsp *http.Response) (*PostApiProfilesIdVersionVersionDeployResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &PostApiProfilesIdVersionVersionDeployResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest Error
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON500 = &dest
-
-	}
-
-	return response, nil
-}
-
 // ParseGetApiSourcesRedditSubredditsResponse parses an HTTP response from a GetApiSourcesRedditSubredditsWithResponse call
 func ParseGetApiSourcesRedditSubredditsResponse(rsp *http.Response) (*GetApiSourcesRedditSubredditsResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -2518,15 +2076,6 @@ type ServerInterface interface {
 	// Jumpstart a profile - run analysis on old posts
 	// (POST /api/profiles/{id}/jumpstart)
 	PostApiProfilesIdJumpstart(c *gin.Context, id int)
-	// Create a new profile version
-	// (POST /api/profiles/{id}/version)
-	PostApiProfilesIdVersion(c *gin.Context, id int)
-	// Update a profile version (version must be in test mode)
-	// (PUT /api/profiles/{id}/version/{version})
-	PutApiProfilesIdVersionVersion(c *gin.Context, id int, version int)
-	// Deploy a profile version
-	// (POST /api/profiles/{id}/version/{version}/deploy)
-	PostApiProfilesIdVersionVersionDeploy(c *gin.Context, id int, version int)
 	// Get all subreddits
 	// (GET /api/sources/reddit/subreddits)
 	GetApiSourcesRedditSubreddits(c *gin.Context)
@@ -2729,102 +2278,6 @@ func (siw *ServerInterfaceWrapper) PostApiProfilesIdJumpstart(c *gin.Context) {
 	siw.Handler.PostApiProfilesIdJumpstart(c, id)
 }
 
-// PostApiProfilesIdVersion operation middleware
-func (siw *ServerInterfaceWrapper) PostApiProfilesIdVersion(c *gin.Context) {
-
-	var err error
-
-	// ------------- Path parameter "id" -------------
-	var id int
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true})
-	if err != nil {
-		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
-		return
-	}
-
-	c.Set(BasicAuthScopes, []string{})
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		middleware(c)
-		if c.IsAborted() {
-			return
-		}
-	}
-
-	siw.Handler.PostApiProfilesIdVersion(c, id)
-}
-
-// PutApiProfilesIdVersionVersion operation middleware
-func (siw *ServerInterfaceWrapper) PutApiProfilesIdVersionVersion(c *gin.Context) {
-
-	var err error
-
-	// ------------- Path parameter "id" -------------
-	var id int
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true})
-	if err != nil {
-		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
-		return
-	}
-
-	// ------------- Path parameter "version" -------------
-	var version int
-
-	err = runtime.BindStyledParameterWithOptions("simple", "version", c.Param("version"), &version, runtime.BindStyledParameterOptions{Explode: false, Required: true})
-	if err != nil {
-		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter version: %w", err), http.StatusBadRequest)
-		return
-	}
-
-	c.Set(BasicAuthScopes, []string{})
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		middleware(c)
-		if c.IsAborted() {
-			return
-		}
-	}
-
-	siw.Handler.PutApiProfilesIdVersionVersion(c, id, version)
-}
-
-// PostApiProfilesIdVersionVersionDeploy operation middleware
-func (siw *ServerInterfaceWrapper) PostApiProfilesIdVersionVersionDeploy(c *gin.Context) {
-
-	var err error
-
-	// ------------- Path parameter "id" -------------
-	var id int
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true})
-	if err != nil {
-		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
-		return
-	}
-
-	// ------------- Path parameter "version" -------------
-	var version int
-
-	err = runtime.BindStyledParameterWithOptions("simple", "version", c.Param("version"), &version, runtime.BindStyledParameterOptions{Explode: false, Required: true})
-	if err != nil {
-		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter version: %w", err), http.StatusBadRequest)
-		return
-	}
-
-	c.Set(BasicAuthScopes, []string{})
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		middleware(c)
-		if c.IsAborted() {
-			return
-		}
-	}
-
-	siw.Handler.PostApiProfilesIdVersionVersionDeploy(c, id, version)
-}
-
 // GetApiSourcesRedditSubreddits operation middleware
 func (siw *ServerInterfaceWrapper) GetApiSourcesRedditSubreddits(c *gin.Context) {
 
@@ -2963,9 +2416,6 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.GET(options.BaseURL+"/api/profiles/:id", wrapper.GetApiProfilesId)
 	router.PUT(options.BaseURL+"/api/profiles/:id", wrapper.PutApiProfilesId)
 	router.POST(options.BaseURL+"/api/profiles/:id/jumpstart", wrapper.PostApiProfilesIdJumpstart)
-	router.POST(options.BaseURL+"/api/profiles/:id/version", wrapper.PostApiProfilesIdVersion)
-	router.PUT(options.BaseURL+"/api/profiles/:id/version/:version", wrapper.PutApiProfilesIdVersionVersion)
-	router.POST(options.BaseURL+"/api/profiles/:id/version/:version/deploy", wrapper.PostApiProfilesIdVersionVersionDeploy)
 	router.GET(options.BaseURL+"/api/sources/reddit/subreddits", wrapper.GetApiSourcesRedditSubreddits)
 	router.POST(options.BaseURL+"/api/sources/reddit/subreddits/:subreddit/add_profiles", wrapper.PostApiSourcesRedditSubredditsSubredditAddProfiles)
 	router.POST(options.BaseURL+"/api/sources/reddit/subreddits/:subreddit/remove_profiles", wrapper.PostApiSourcesRedditSubredditsSubredditRemoveProfiles)
@@ -3262,120 +2712,6 @@ func (response PostApiProfilesIdJumpstart500JSONResponse) VisitPostApiProfilesId
 	return json.NewEncoder(w).Encode(response)
 }
 
-type PostApiProfilesIdVersionRequestObject struct {
-	Id   int `json:"id"`
-	Body *PostApiProfilesIdVersionJSONRequestBody
-}
-
-type PostApiProfilesIdVersionResponseObject interface {
-	VisitPostApiProfilesIdVersionResponse(w http.ResponseWriter) error
-}
-
-type PostApiProfilesIdVersion200JSONResponse struct {
-	Id int `json:"id"`
-}
-
-func (response PostApiProfilesIdVersion200JSONResponse) VisitPostApiProfilesIdVersionResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
-type PostApiProfilesIdVersion400Response struct {
-}
-
-func (response PostApiProfilesIdVersion400Response) VisitPostApiProfilesIdVersionResponse(w http.ResponseWriter) error {
-	w.WriteHeader(400)
-	return nil
-}
-
-type PostApiProfilesIdVersion500JSONResponse Error
-
-func (response PostApiProfilesIdVersion500JSONResponse) VisitPostApiProfilesIdVersionResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(500)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
-type PutApiProfilesIdVersionVersionRequestObject struct {
-	Id      int `json:"id"`
-	Version int `json:"version"`
-	Body    *PutApiProfilesIdVersionVersionJSONRequestBody
-}
-
-type PutApiProfilesIdVersionVersionResponseObject interface {
-	VisitPutApiProfilesIdVersionVersionResponse(w http.ResponseWriter) error
-}
-
-type PutApiProfilesIdVersionVersion204Response struct {
-}
-
-func (response PutApiProfilesIdVersionVersion204Response) VisitPutApiProfilesIdVersionVersionResponse(w http.ResponseWriter) error {
-	w.WriteHeader(204)
-	return nil
-}
-
-type PutApiProfilesIdVersionVersion400Response struct {
-}
-
-func (response PutApiProfilesIdVersionVersion400Response) VisitPutApiProfilesIdVersionVersionResponse(w http.ResponseWriter) error {
-	w.WriteHeader(400)
-	return nil
-}
-
-type PutApiProfilesIdVersionVersion404Response struct {
-}
-
-func (response PutApiProfilesIdVersionVersion404Response) VisitPutApiProfilesIdVersionVersionResponse(w http.ResponseWriter) error {
-	w.WriteHeader(404)
-	return nil
-}
-
-type PutApiProfilesIdVersionVersion500JSONResponse Error
-
-func (response PutApiProfilesIdVersionVersion500JSONResponse) VisitPutApiProfilesIdVersionVersionResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(500)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
-type PostApiProfilesIdVersionVersionDeployRequestObject struct {
-	Id      int `json:"id"`
-	Version int `json:"version"`
-}
-
-type PostApiProfilesIdVersionVersionDeployResponseObject interface {
-	VisitPostApiProfilesIdVersionVersionDeployResponse(w http.ResponseWriter) error
-}
-
-type PostApiProfilesIdVersionVersionDeploy204Response struct {
-}
-
-func (response PostApiProfilesIdVersionVersionDeploy204Response) VisitPostApiProfilesIdVersionVersionDeployResponse(w http.ResponseWriter) error {
-	w.WriteHeader(204)
-	return nil
-}
-
-type PostApiProfilesIdVersionVersionDeploy400Response struct {
-}
-
-func (response PostApiProfilesIdVersionVersionDeploy400Response) VisitPostApiProfilesIdVersionVersionDeployResponse(w http.ResponseWriter) error {
-	w.WriteHeader(400)
-	return nil
-}
-
-type PostApiProfilesIdVersionVersionDeploy500JSONResponse Error
-
-func (response PostApiProfilesIdVersionVersionDeploy500JSONResponse) VisitPostApiProfilesIdVersionVersionDeployResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(500)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
 type GetApiSourcesRedditSubredditsRequestObject struct {
 }
 
@@ -3556,15 +2892,6 @@ type StrictServerInterface interface {
 	// Jumpstart a profile - run analysis on old posts
 	// (POST /api/profiles/{id}/jumpstart)
 	PostApiProfilesIdJumpstart(ctx context.Context, request PostApiProfilesIdJumpstartRequestObject) (PostApiProfilesIdJumpstartResponseObject, error)
-	// Create a new profile version
-	// (POST /api/profiles/{id}/version)
-	PostApiProfilesIdVersion(ctx context.Context, request PostApiProfilesIdVersionRequestObject) (PostApiProfilesIdVersionResponseObject, error)
-	// Update a profile version (version must be in test mode)
-	// (PUT /api/profiles/{id}/version/{version})
-	PutApiProfilesIdVersionVersion(ctx context.Context, request PutApiProfilesIdVersionVersionRequestObject) (PutApiProfilesIdVersionVersionResponseObject, error)
-	// Deploy a profile version
-	// (POST /api/profiles/{id}/version/{version}/deploy)
-	PostApiProfilesIdVersionVersionDeploy(ctx context.Context, request PostApiProfilesIdVersionVersionDeployRequestObject) (PostApiProfilesIdVersionVersionDeployResponseObject, error)
 	// Get all subreddits
 	// (GET /api/sources/reddit/subreddits)
 	GetApiSourcesRedditSubreddits(ctx context.Context, request GetApiSourcesRedditSubredditsRequestObject) (GetApiSourcesRedditSubredditsResponseObject, error)
@@ -3872,105 +3199,6 @@ func (sh *strictHandler) PostApiProfilesIdJumpstart(ctx *gin.Context, id int) {
 	}
 }
 
-// PostApiProfilesIdVersion operation middleware
-func (sh *strictHandler) PostApiProfilesIdVersion(ctx *gin.Context, id int) {
-	var request PostApiProfilesIdVersionRequestObject
-
-	request.Id = id
-
-	var body PostApiProfilesIdVersionJSONRequestBody
-	if err := ctx.ShouldBindJSON(&body); err != nil {
-		ctx.Status(http.StatusBadRequest)
-		ctx.Error(err)
-		return
-	}
-	request.Body = &body
-
-	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
-		return sh.ssi.PostApiProfilesIdVersion(ctx, request.(PostApiProfilesIdVersionRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "PostApiProfilesIdVersion")
-	}
-
-	response, err := handler(ctx, request)
-
-	if err != nil {
-		ctx.Error(err)
-		ctx.Status(http.StatusInternalServerError)
-	} else if validResponse, ok := response.(PostApiProfilesIdVersionResponseObject); ok {
-		if err := validResponse.VisitPostApiProfilesIdVersionResponse(ctx.Writer); err != nil {
-			ctx.Error(err)
-		}
-	} else if response != nil {
-		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// PutApiProfilesIdVersionVersion operation middleware
-func (sh *strictHandler) PutApiProfilesIdVersionVersion(ctx *gin.Context, id int, version int) {
-	var request PutApiProfilesIdVersionVersionRequestObject
-
-	request.Id = id
-	request.Version = version
-
-	var body PutApiProfilesIdVersionVersionJSONRequestBody
-	if err := ctx.ShouldBindJSON(&body); err != nil {
-		ctx.Status(http.StatusBadRequest)
-		ctx.Error(err)
-		return
-	}
-	request.Body = &body
-
-	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
-		return sh.ssi.PutApiProfilesIdVersionVersion(ctx, request.(PutApiProfilesIdVersionVersionRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "PutApiProfilesIdVersionVersion")
-	}
-
-	response, err := handler(ctx, request)
-
-	if err != nil {
-		ctx.Error(err)
-		ctx.Status(http.StatusInternalServerError)
-	} else if validResponse, ok := response.(PutApiProfilesIdVersionVersionResponseObject); ok {
-		if err := validResponse.VisitPutApiProfilesIdVersionVersionResponse(ctx.Writer); err != nil {
-			ctx.Error(err)
-		}
-	} else if response != nil {
-		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// PostApiProfilesIdVersionVersionDeploy operation middleware
-func (sh *strictHandler) PostApiProfilesIdVersionVersionDeploy(ctx *gin.Context, id int, version int) {
-	var request PostApiProfilesIdVersionVersionDeployRequestObject
-
-	request.Id = id
-	request.Version = version
-
-	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
-		return sh.ssi.PostApiProfilesIdVersionVersionDeploy(ctx, request.(PostApiProfilesIdVersionVersionDeployRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "PostApiProfilesIdVersionVersionDeploy")
-	}
-
-	response, err := handler(ctx, request)
-
-	if err != nil {
-		ctx.Error(err)
-		ctx.Status(http.StatusInternalServerError)
-	} else if validResponse, ok := response.(PostApiProfilesIdVersionVersionDeployResponseObject); ok {
-		if err := validResponse.VisitPostApiProfilesIdVersionVersionDeployResponse(ctx.Writer); err != nil {
-			ctx.Error(err)
-		}
-	} else if response != nil {
-		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
 // GetApiSourcesRedditSubreddits operation middleware
 func (sh *strictHandler) GetApiSourcesRedditSubreddits(ctx *gin.Context) {
 	var request GetApiSourcesRedditSubredditsRequestObject
@@ -4096,37 +3324,33 @@ func (sh *strictHandler) GetApiSourcesRedditSubredditsWithProfile(ctx *gin.Conte
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
-	"gz0FNAAA",
+	"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",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

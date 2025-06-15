@@ -25,13 +25,6 @@ type AnalysisParameters struct {
 	SourceID string `json:"source_id"`
 	// ProfileID is an identifier of a Scout's profile
 	ProfileID int64 `json:"profile_id"`
-
-	// TestMode is a flag that indicates if the task should be run in test mode
-	TestMode bool `json:"test_mode"`
-
-	// Version is a version of the profile to use
-	Version int64 `json:"version"`
-
 	// Source is a source of post
 	//
 	// Example: reddit

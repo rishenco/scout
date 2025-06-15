@@ -60,102 +60,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /api/profiles/{id}/version:
-    post:
-      summary: Create a new profile version
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ProfileVersion'
-      responses:
-        "200":
-          description: Profile version created successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  id:
-                    type: integer
-                required:
-                  - id
-        "400":
-          description: Profile is not in test mode
-        "500":
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-  /api/profiles/{id}/version/{version}:
-    put:
-      summary: Update a profile version (version must be in test mode)
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-        - name: version
-          in: path
-          required: true
-          schema:
-            type: integer
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ProfileVersionUpdate'
-      responses:
-        "204":
-          description: Profile version updated successfully
-        "404":
-          description: Profile not found
-        "400":
-          description: Profile is not in test mode
-        "500":
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-    
-  /api/profiles/{id}/version/{version}/deploy:
-    post:
-      summary: Deploy a profile version
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-        - name: version
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        "204":
-          description: Profile version deployed successfully
-        "400":
-          description: Version is not in test mode
-        "500":
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
   /api/profiles/{id}:
     get:
       summary: Get a profile by ID
@@ -476,41 +380,18 @@ components:
           type: string
         updated_at:
           type: string
-        selected_version:
-          type: integer
-        versions:
-          type: array
-          items:
-            $ref: '#/components/schemas/ProfileVersion'
-      required:
-        - id
-        - name
-    
-    ProfileVersion:
-      type: object
-      properties:
         default_settings:
           $ref: '#/components/schemas/ProfileSettings'
         sources_settings:
           type: object
           additionalProperties:
             $ref: '#/components/schemas/ProfileSettings'
-        version:
-          type: integer
-        test_mode:
-          type: boolean
-        created_at:
-          type: string
-        updated_at:
-          type: string
       required:
-        - version
-        - created_at
-        - updated_at
+        - id
+        - name
 
     ProfileSettings:
       type: object
-      nullable: true
       properties:
         relevancy_filter:
           type: string
@@ -518,6 +399,10 @@ components:
           type: object
           additionalProperties:
             type: string
+        updated_at:
+          type: string
+        created_at:
+          type: string
       required:
         - relevancy_filter
         - extracted_properties
@@ -543,18 +428,25 @@ components:
       properties:
         name:
           type: string
-
-    ProfileVersionUpdate:
-      type: object
-      nullable: true
-      properties:
         default_settings:
+          $ref: '#/components/schemas/ProfileSettingsUpdate'
           nullable: true
-          $ref: '#/components/schemas/ProfileSettings'
         sources_settings:
           type: object
           additionalProperties:
-            $ref: '#/components/schemas/ProfileSettings'
+            $ref: '#/components/schemas/ProfileSettingsUpdate'
+            nullable: true
+    ProfileSettingsUpdate:
+      type: object
+      nullable: true
+      properties:
+        relevancy_filter:
+          type: string
+        extracted_properties:
+          type: object
+          additionalProperties:
+            type: string
+            nullable: true
 
     DetectionListRequest:
       type: object
@@ -578,10 +470,6 @@ components:
           type: array
           items:
             type: string
-        versions:
-          type: array
-          items:
-            type: integer
         is_relevant:
           type: boolean
         tags:
@@ -628,10 +516,6 @@ components:
           type: string
         profile_id:
           type: integer
-        profile_version:
-          type: integer
-        test_mode:
-          type: boolean
         is_relevant:
           type: boolean
         properties:
@@ -645,7 +529,6 @@ components:
         - source
         - source_id
         - profile_id
-        - profile_version
         - is_relevant
         - properties
         - created_at

@@ -26,8 +26,6 @@ type DetectionRecord struct {
 	Source     string            `json:"source"`
 	SourceID   string            `json:"source_id"`
 	ProfileID  int64             `json:"profile_id"`
-	Version    int64             `json:"version"`
-	TestMode   bool              `json:"test_mode"`
 	IsRelevant bool              `json:"is_relevant"`
 	Properties map[string]string `json:"properties"`
 	CreatedAt  time.Time         `json:"created_at"`
@@ -60,8 +58,6 @@ type DetectionFilter struct {
 	//
 	// Example: ["reddit", "linkedin"]
 	Sources    *[]string
-	Versions   *[]int64
-	TestMode   *bool
 	IsRelevant *bool
 	Tags       DetectionTagsFilter
 }

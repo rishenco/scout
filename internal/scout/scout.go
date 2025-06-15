@@ -16,9 +16,6 @@ type storage interface {
 	DeleteProfileByID(ctx context.Context, id int64) error
 	CreateProfile(ctx context.Context, profile models.Profile) (id int64, err error)
 	UpdateProfile(ctx context.Context, update models.ProfileUpdate) error
-	UpdateProfileVersion(ctx context.Context, profileID int64, version int64, update models.VersionUpdate) error
-	CreateProfileVersion(ctx context.Context, profileID int64, version models.ProfileVersion) (id int64, err error)
-	DeployProfileVersion(ctx context.Context, profileID int64, version int64) error
 	SaveDetection(ctx context.Context, record models.DetectionRecord) error
 	ListDetections(ctx context.Context, query models.DetectionQuery) ([]models.DetectionRecord, error)
 	GetDetectionTags(ctx context.Context, detectionIDs []int64) ([]models.DetectionTags, error)
@@ -256,16 +253,4 @@ func (s *Scout) JumpstartProfile(
 		Msg("scheduled tasks for profile jumpstart")
 
 	return nil
-}
-
-func (s *Scout) UpdateProfileVersion(ctx context.Context, profileID int64, version int64, update models.VersionUpdate) error {
-	return s.storage.UpdateProfileVersion(ctx, profileID, version, update)
-}
-
-func (s *Scout) CreateProfileVersion(ctx context.Context, profileID int64, version models.ProfileVersion) (int64, error) {
-	return s.storage.CreateProfileVersion(ctx, profileID, version)
-}
-
-func (s *Scout) DeployProfileVersion(ctx context.Context, profileID int64, version int64) error {
-	return s.storage.DeployProfileVersion(ctx, profileID, version)
 }

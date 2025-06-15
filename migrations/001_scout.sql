@@ -7,32 +7,20 @@ CREATE SCHEMA IF NOT EXISTS scout;
 CREATE TABLE IF NOT EXISTS scout.profiles (
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
-    selected_version BIGINT NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     UNIQUE (name)
 );
 
--- Create profile versions table
-CREATE TABLE IF NOT EXISTS scout.profile_versions (
-    profile_id BIGINT NOT NULL,
-    version BIGINT NOT NULL,
-    test_mode BOOLEAN NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    UNIQUE NULLS NOT DISTINCT (profile_id, version)
-);
-
 -- Create profile settings table
 CREATE TABLE IF NOT EXISTS scout.profile_settings (
     profile_id BIGINT NOT NULL,
-    version BIGINT NOT NULL,
     source VARCHAR(255) NULL,
-    relevancy_filter VARCHAR(16000) NOT NULL,
+    relevancy_filter VARCHAR(8192) NOT NULL,
     extracted_properties JSONB NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    UNIQUE NULLS NOT DISTINCT (profile_id, version, source)
+    UNIQUE NULLS NOT DISTINCT (profile_id, source)
 );
 
 -- Create detections table
@@ -42,8 +30,6 @@ CREATE TABLE IF NOT EXISTS scout.detections (
     source_id VARCHAR(255) NOT NULL,
     profile_id BIGINT NOT NULL,
     is_relevant BOOLEAN NOT NULL,
-    version BIGINT NOT NULL,
-    test_mode BOOLEAN NOT NULL,
     properties JSONB,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -63,7 +49,6 @@ CREATE TABLE IF NOT EXISTS scout.analysis_tasks (
     source_id VARCHAR(255) NOT NULL,
     profile_id BIGINT NOT NULL,
     should_save BOOLEAN NOT NULL,
-    test_mode BOOLEAN NOT NULL,
     is_claimed BOOLEAN NOT NULL DEFAULT FALSE,
     claimed_at TIMESTAMP WITH TIME ZONE,
     is_committed BOOLEAN NOT NULL DEFAULT FALSE,
@@ -81,6 +66,5 @@ DROP TABLE IF EXISTS scout.analysis_tasks;
 DROP TABLE IF EXISTS scout.detection_tags;
 DROP TABLE IF EXISTS scout.detections;
 DROP TABLE IF EXISTS scout.profile_settings;
-DROP TABLE IF EXISTS scout.profile_versions;
 DROP TABLE IF EXISTS scout.profiles;
 DROP SCHEMA IF EXISTS scout;
