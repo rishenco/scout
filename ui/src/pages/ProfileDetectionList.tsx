@@ -121,7 +121,19 @@ export default function ProfileDetectionList() {
         {profile && (
           <div className="mb-6">
             <p className="text-muted-foreground">
-              Subreddits: {subreddits?.map(subreddit => subreddit.subreddit).join(', ')}
+              Subreddits: {subreddits?.map((subreddit, index) => (
+                <span key={subreddit.subreddit}>
+                  {index > 0 && ', '}
+                  <a 
+                    href={`https://reddit.com/r/${subreddit.subreddit}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 hover:underline"
+                  >
+                    r/{subreddit.subreddit}
+                  </a>
+                </span>
+              ))}
             </p>
             <p className="text-sm text-muted-foreground mt-2">
               {profile.active 

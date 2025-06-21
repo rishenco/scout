@@ -30,7 +30,9 @@ export function DetectionList({ profileId }: DetectionListProps) {
     isLoading, 
     isFetchingNextPage, 
     fetchNextPage, 
-    hasNextPage 
+    hasNextPage,
+    refetch,
+    isRefetching
   } = useInfiniteDetections(filter);
 
   // Flatten the pages data from the hook into a single array
@@ -68,7 +70,9 @@ export function DetectionList({ profileId }: DetectionListProps) {
     <div className="space-y-4">
       <DetectionFilterComponent 
         filter={filter}
-        onFilterChange={handleFilterChange} 
+        onFilterChange={handleFilterChange}
+        onRefresh={refetch}
+        isRefreshing={isRefetching}
       />
       
       <div className="space-y-4">
