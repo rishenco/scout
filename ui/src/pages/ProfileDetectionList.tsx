@@ -1,24 +1,61 @@
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip'
-import { ArrowLeft, Settings, Play, Pause } from 'lucide-react'
+import { ArrowLeft, Settings, Play, Pause, Zap } from 'lucide-react'
 import { DetectionList } from '@/components/detections/DetectionList'
+import { JumpstartDialog } from '@/components/profiles/JumpstartDialog'
 import { useProfile, useSubredditsForProfile, useUpdateProfile } from '@/api/hooks'
+import { useState, useEffect } from 'react'
+import { toast } from 'sonner'
 
 export default function ProfileDetectionList() {
   const { profileId } = useParams<{ profileId: string }>()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { data: profile } = useProfile(parseInt(profileId || '0'))
   const { data: subreddits } = useSubredditsForProfile(parseInt(profileId || '0'))
-  const updateProfile = useUpdateProfile()
+  const updateProfileMutation = useUpdateProfile()
+  const [showJumpstartDialog, setShowJumpstartDialog] = useState(false)
+  const [isFromProfileChange, setIsFromProfileChange] = useState(false)
+
+  // Check for jumpstart parameter and show dialog
+  useEffect(() => {
+    if (searchParams.get('jumpstart') === 'true') {
+      setShowJumpstartDialog(true)
+      setIsFromProfileChange(true)
+      // Remove the parameter from URL to clean it up
+      const newSearchParams = new URLSearchParams(searchParams)
+      newSearchParams.delete('jumpstart')
+      setSearchParams(newSearchParams, { replace: true })
+    }
+  }, [searchParams, setSearchParams])
 
   const handleActiveToggle = () => {
     if (profile) {
-      updateProfile.mutate({
+      updateProfileMutation.mutate({
         id: profile.id,
         update: { active: !profile.active }
       })
     }
   }
+
+  const handleSkipAndActivate = () => {
+    if (profile) {
+      updateProfileMutation.mutate(
+        {
+          id: profile.id,
+          update: { active: true }
+        },
+        {
+          onSuccess: () => {
+            toast.success("Profile activated!");
+          },
+          onError: (err: Error) => {
+            toast.error(`Failed to activate profile: ${err.message}`);
+          },
+        }
+      );
+    }
+  };
 
   if (!profileId) {
     return <div>Profile ID not found!</div>
@@ -40,7 +77,7 @@ export default function ProfileDetectionList() {
                 <TooltipTrigger asChild>
                   <button
                     onClick={handleActiveToggle}
-                    disabled={updateProfile.isPending}
+                    disabled={updateProfileMutation.isPending}
                     className={`flex items-center justify-center w-10 h-10 rounded-full transition-colors hover:scale-105 disabled:opacity-50 ${
                       profile.active 
                         ? 'bg-green-100 text-green-600 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/50' 
@@ -64,12 +101,21 @@ export default function ProfileDetectionList() {
               </Tooltip>
             )}
           </div>
-          <Button asChild variant="outline">
-            <Link to={`/profiles/${profileId}/edit`}>
-              <Settings className="h-4 w-4 mr-2" />
-              Edit Profile
-            </Link>
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline"
+              onClick={() => setShowJumpstartDialog(true)}
+            >
+              <Zap className="h-4 w-4 mr-2" />
+              Jumpstart
+            </Button>
+            <Button asChild variant="outline">
+              <Link to={`/profiles/${profileId}/edit`}>
+                <Settings className="h-4 w-4 mr-2" />
+                Edit Profile
+              </Link>
+            </Button>
+          </div>
         </div>
         
         {profile && (
@@ -86,6 +132,21 @@ export default function ProfileDetectionList() {
         )}
         
         <DetectionList profileId={parseInt(profileId || '0')} />
+
+        {profileId && (
+          <JumpstartDialog
+            profileId={parseInt(profileId)}
+            open={showJumpstartDialog}
+            onOpenChange={(open) => {
+              setShowJumpstartDialog(open);
+              if (!open) {
+                setIsFromProfileChange(false);
+              }
+            }}
+            showAfterProfileChange={isFromProfileChange}
+            onSkipAndActivate={isFromProfileChange ? handleSkipAndActivate : undefined}
+          />
+        )}
       </div>
     </TooltipProvider>
   )

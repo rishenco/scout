@@ -1,4 +1,4 @@
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft } from 'lucide-react'
 import { ProfileEditor } from '@/components/profiles/ProfileEditor'
@@ -15,11 +15,10 @@ import { useState, useCallback } from 'react'
 export default function EditProfile() {
   const { profileId } = useParams<{ profileId: string }>()
   const numberProfileId = parseInt(profileId || '-1')
+  const navigate = useNavigate()
   
   const { data: profile, isLoading: isLoadingProfile } = useProfile(numberProfileId)
   const { mutate: combinedUpdateProfile, isPending: isUpdatingProfile } = useCombinedUpdateProfile()
-
-
   const [draftUpdateData, setDraftUpdateData] = useState<ProfileUpdate | null>(null)
 
   const handleEditProfile = useCallback((update: ProfileUpdate, _: string[]) => {
@@ -35,6 +34,8 @@ export default function EditProfile() {
       {
         onSuccess: () => {
           toast.success("Profile updated successfully!");
+          toast.warning("Profile is inactive after changes. Use jumpstart to test it or activate it manually.");
+          navigate(`/profiles/${numberProfileId}?jumpstart=true`);
         },
         onError: (err: Error) => {
           toast.error(`Failed to update profile: ${err.message}`)
