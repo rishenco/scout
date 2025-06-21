@@ -30,8 +30,8 @@ func NewScoutStorage(pool *pgxpool.Pool, logger zerolog.Logger) *ScoutStorage {
 
 func (s *ScoutStorage) SaveDetection(ctx context.Context, record models.DetectionRecord) error {
 	query := `
-		INSERT INTO scout.detections (source, source_id, profile_id, is_relevant, properties)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO scout.detections (source, source_id, profile_id, settings_version, is_relevant, properties)
+		VALUES ($1, $2, $3, $4, $5, $6)
 	`
 
 	_, err := s.pool.Exec(
@@ -40,6 +40,7 @@ func (s *ScoutStorage) SaveDetection(ctx context.Context, record models.Detectio
 		record.Source,
 		record.SourceID,
 		record.ProfileID,
+		record.SettingsVersion,
 		record.IsRelevant,
 		record.Properties,
 	)
@@ -61,7 +62,7 @@ func (s *ScoutStorage) GetProfile(
 	`
 
 	getProfileSettingsQuery := `
-		SELECT ps.source, ps.profile_id, ps.relevancy_filter, ps.extracted_properties, ps.created_at, ps.updated_at
+		SELECT ps.source, ps.profile_id, ps.settings_version, ps.relevancy_filter, ps.extracted_properties, ps.created_at, ps.updated_at
 		FROM scout.profile_settings ps
 		WHERE ps.profile_id = $1
 	`
@@ -87,7 +88,16 @@ func (s *ScoutStorage) GetProfile(
 		var source *string
 		var settings models.ProfileSettings
 
-		if err := settingsRows.Scan(&source, &settings.ProfileID, &settings.RelevancyFilter, &settings.ExtractedProperties, &settings.CreatedAt, &settings.UpdatedAt); err != nil {
+		err := settingsRows.Scan(
+			&source,
+			&settings.ProfileID,
+			&settings.Version,
+			&settings.RelevancyFilter,
+			&settings.ExtractedProperties,
+			&settings.CreatedAt,
+			&settings.UpdatedAt,
+		)
+		if err != nil {
 			return models.Profile{}, false, fmt.Errorf("scan: %w", err)
 		}
 
@@ -114,7 +124,7 @@ func (s *ScoutStorage) GetAllProfiles(ctx context.Context) ([]models.Profile, er
 	`
 
 	getProfileSettingsQuery := `
-		SELECT ps.profile_id, ps.source, ps.relevancy_filter, ps.extracted_properties, ps.created_at, ps.updated_at
+		SELECT ps.profile_id, ps.source, ps.settings_version, ps.relevancy_filter, ps.extracted_properties, ps.created_at, ps.updated_at
 		FROM scout.profile_settings ps
 	`
 
@@ -152,7 +162,16 @@ func (s *ScoutStorage) GetAllProfiles(ctx context.Context) ([]models.Profile, er
 		var source *string
 		var settings models.ProfileSettings
 
-		if err := settingsRows.Scan(&settings.ProfileID, &source, &settings.RelevancyFilter, &settings.ExtractedProperties, &settings.CreatedAt, &settings.UpdatedAt); err != nil {
+		err := settingsRows.Scan(
+			&settings.ProfileID,
+			&source,
+			&settings.Version,
+			&settings.RelevancyFilter,
+			&settings.ExtractedProperties,
+			&settings.CreatedAt,
+			&settings.UpdatedAt,
+		)
+		if err != nil {
 			return nil, fmt.Errorf("scan: %w", err)
 		}
 
@@ -377,7 +396,8 @@ func (s *ScoutStorage) UpdateProfile(ctx context.Context, update models.ProfileU
 			Update("scout.profile_settings").
 			Where(sq.Eq{"profile_id": update.ProfileID}).
 			Where(sq.Eq{"source": source}).
-			Set("updated_at", sq.Expr("NOW()"))
+			Set("updated_at", sq.Expr("NOW()")).
+			Set("version", sq.Expr("version + 1"))
 
 		if settingsUpdate.RelevancyFilter != nil {
 			sb = sb.Set("relevancy_filter", *settingsUpdate.RelevancyFilter)
@@ -511,8 +531,34 @@ func (s *ScoutStorage) ListDetections(
 		sb = sb.Where(sq.Eq{"d.is_relevant": *query.Filter.IsRelevant})
 	}
 
-	if query.Filter.ProfileIDs != nil {
-		sb = sb.Where(sq.Eq{"d.profile_id": *query.Filter.ProfileIDs})
+	if query.Filter.Profiles != nil && len(*query.Filter.Profiles) > 0 {
+		var profilesFilterClause sq.Or
+
+		for _, profileFilter := range *query.Filter.Profiles {
+			var profileFilterClause sq.And
+
+			profileFilterClause = append(profileFilterClause, sq.Eq{"d.profile_id": profileFilter.ProfileID})
+
+			if len(profileFilter.SourceSettingsVersions) > 0 {
+				sourceAndVersionFilterClause := sq.Or{}
+
+				for _, sourceVersionFilter := range profileFilter.SourceSettingsVersions {
+					sourceAndVersionFilterClause = append(
+						sourceAndVersionFilterClause,
+						sq.Eq{
+							"d.source":           sourceVersionFilter.Source,
+							"d.settings_version": sourceVersionFilter.Versions,
+						},
+					)
+				}
+
+				profileFilterClause = append(profileFilterClause, sourceAndVersionFilterClause)
+			}
+
+			profilesFilterClause = append(profilesFilterClause, profileFilterClause)
+		}
+
+		sb = sb.Where(profilesFilterClause)
 	}
 
 	if query.Filter.Sources != nil {
@@ -531,6 +577,8 @@ func (s *ScoutStorage) ListDetections(
 	if err != nil {
 		return nil, fmt.Errorf("sb to sql: %w", err)
 	}
+
+	s.logger.Info().Str("sql", sql).Interface("args", args).Msg("list detections")
 
 	rows, err := s.pool.Query(ctx, sql, args...)
 	if err != nil {

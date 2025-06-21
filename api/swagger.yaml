@@ -423,6 +423,8 @@ components:
     ProfileSettings:
       type: object
       properties:
+        version:
+          type: integer
         relevancy_filter:
           type: string
         extracted_properties:
@@ -434,6 +436,7 @@ components:
         created_at:
           type: string
       required:
+        - version
         - relevancy_filter
         - extracted_properties
     
@@ -498,7 +501,7 @@ components:
         profiles:
           type: array
           items:
-            type: integer
+            $ref: '#/components/schemas/ProfileFilter'
         sources:
           type: array
           items:
@@ -508,6 +511,31 @@ components:
         tags:
           $ref: '#/components/schemas/DetectionTagsFilter'
     
+    ProfileFilter:
+      type: object
+      properties:
+        profile_id:
+          type: integer
+        source_settings_versions:
+          type: array
+          items:
+            $ref: '#/components/schemas/SourceSettingsVersionsFilter'
+      required:
+        - profile_id
+        - source_settings_versions
+    
+    SourceSettingsVersionsFilter:
+      type: object
+      properties:
+        source:
+          type: string
+        versions:
+          type: array
+          items:
+            type: integer
+      required:
+        - versions
+
     DetectionTagsFilter:
       type: object
       properties:
@@ -549,6 +577,8 @@ components:
           type: string
         profile_id:
           type: integer
+        settings_version:
+          type: integer
         is_relevant:
           type: boolean
         properties:
@@ -562,6 +592,7 @@ components:
         - source
         - source_id
         - profile_id
+        - settings_version
         - is_relevant
         - properties
         - created_at

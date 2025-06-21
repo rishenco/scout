@@ -37,19 +37,20 @@ type AnalyzeRequest struct {
 
 // Detection defines model for Detection.
 type Detection struct {
-	CreatedAt  string            `json:"created_at"`
-	Id         int               `json:"id"`
-	IsRelevant bool              `json:"is_relevant"`
-	ProfileId  int               `json:"profile_id"`
-	Properties map[string]string `json:"properties"`
-	Source     string            `json:"source"`
-	SourceId   string            `json:"source_id"`
+	CreatedAt       string            `json:"created_at"`
+	Id              int               `json:"id"`
+	IsRelevant      bool              `json:"is_relevant"`
+	ProfileId       int               `json:"profile_id"`
+	Properties      map[string]string `json:"properties"`
+	SettingsVersion int               `json:"settings_version"`
+	Source          string            `json:"source"`
+	SourceId        string            `json:"source_id"`
 }
 
 // DetectionFilter defines model for DetectionFilter.
 type DetectionFilter struct {
 	IsRelevant *bool                `json:"is_relevant,omitempty"`
-	Profiles   *[]int               `json:"profiles,omitempty"`
+	Profiles   *[]ProfileFilter     `json:"profiles,omitempty"`
 	Sources    *[]string            `json:"sources,omitempty"`
 	Tags       *DetectionTagsFilter `json:"tags,omitempty"`
 }
@@ -102,6 +103,12 @@ type Profile struct {
 	UpdatedAt       *string                     `json:"updated_at,omitempty"`
 }
 
+// ProfileFilter defines model for ProfileFilter.
+type ProfileFilter struct {
+	ProfileId              int                            `json:"profile_id"`
+	SourceSettingsVersions []SourceSettingsVersionsFilter `json:"source_settings_versions"`
+}
+
 // ProfileJumpstartRequest defines model for ProfileJumpstartRequest.
 type ProfileJumpstartRequest struct {
 	// ExcludeAlreadyAnalyzed Whether to exclude already analyzed posts.
@@ -120,6 +127,7 @@ type ProfileSettings struct {
 	ExtractedProperties map[string]string `json:"extracted_properties"`
 	RelevancyFilter     string            `json:"relevancy_filter"`
 	UpdatedAt           *string           `json:"updated_at,omitempty"`
+	Version             int               `json:"version"`
 }
 
 // ProfileSettingsUpdate defines model for ProfileSettingsUpdate.
@@ -140,6 +148,12 @@ type ProfileUpdate struct {
 	DefaultSettings nullable.Nullable[ProfileSettingsUpdate] `json:"default_settings,omitempty"`
 	Name            *string                                  `json:"name,omitempty"`
 	SourcesSettings *map[string]*ProfileSettingsUpdate       `json:"sources_settings,omitempty"`
+}
+
+// SourceSettingsVersionsFilter defines model for SourceSettingsVersionsFilter.
+type SourceSettingsVersionsFilter struct {
+	Source   *string `json:"source,omitempty"`
+	Versions []int   `json:"versions"`
 }
 
 // SubredditSettings defines model for SubredditSettings.
@@ -3551,35 +3565,36 @@ func (sh *strictHandler) GetApiStatisticsProfileId(ctx *gin.Context, profileId i
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
+	"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",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

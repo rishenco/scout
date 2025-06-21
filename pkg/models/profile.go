@@ -18,6 +18,7 @@ type Profile struct {
 
 type ProfileSettings struct {
 	ProfileID           int64             `json:"profile_id"`
+	Version             int64             `json:"version"`
 	RelevancyFilter     string            `json:"relevancy_filter"`
 	ExtractedProperties map[string]string `json:"extracted_properties"`
 	CreatedAt           time.Time         `json:"created_at"`

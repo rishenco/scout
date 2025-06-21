@@ -90,11 +90,12 @@ func (s *Scout) Analyze(
 	if shouldSave {
 		// Save detection to database
 		record := models.DetectionRecord{
-			Source:     source,
-			SourceID:   sourceID,
-			ProfileID:  profileSettings.ProfileID,
-			IsRelevant: detection.IsRelevant,
-			Properties: detection.Properties,
+			Source:          source,
+			SourceID:        sourceID,
+			ProfileID:       profileSettings.ProfileID,
+			SettingsVersion: profileSettings.Version,
+			IsRelevant:      detection.IsRelevant,
+			Properties:      detection.Properties,
 		}
 
 		if err := s.storage.SaveDetection(ctx, record); err != nil {

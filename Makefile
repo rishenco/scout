@@ -51,3 +51,8 @@ down-db:
 .PHONY: lint
 lint:
 	golangci-lint run ./...
+
+.PHONY: ui
+ui:
+	cd ui && \
+	npm run dev

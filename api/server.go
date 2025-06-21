@@ -267,13 +267,14 @@ func (s *Server) PostApiDetectionsList(
 	for _, detection := range detections {
 		oapiDetection := oapi.ListedDetection{
 			Detection: oapi.Detection{
-				CreatedAt:  detection.CreatedAt.Format(time.RFC3339),
-				Id:         int(detection.ID),
-				IsRelevant: detection.IsRelevant,
-				ProfileId:  int(detection.ProfileID),
-				Properties: detection.Properties,
-				Source:     detection.Source,
-				SourceId:   detection.SourceID,
+				CreatedAt:       detection.CreatedAt.Format(time.RFC3339),
+				Id:              int(detection.ID),
+				IsRelevant:      detection.IsRelevant,
+				ProfileId:       int(detection.ProfileID),
+				Properties:      detection.Properties,
+				SettingsVersion: int(detection.SettingsVersion),
+				Source:          detection.Source,
+				SourceId:        detection.SourceID,
 			},
 			SourcePost: nil,
 			Tags:       nil,
@@ -584,14 +585,30 @@ func detectionQueryFromOapi(request oapi.DetectionListRequest) models.DetectionQ
 
 func detectionFilterFromOapi(filter oapi.DetectionFilter) models.DetectionFilter {
 	modelFilter := models.DetectionFilter{
-		ProfileIDs: nil,
 		Sources:    filter.Sources,
 		IsRelevant: filter.IsRelevant,
 		Tags:       models.DetectionTagsFilter{},
 	}
 
 	if filter.Profiles != nil {
-		modelFilter.ProfileIDs = lo.ToPtr(lo.Map(*filter.Profiles, func(id int, _ int) int64 { return int64(id) }))
+		modelProfileFilters := lo.Map(*filter.Profiles, func(profileFilter oapi.ProfileFilter, _ int) models.ProfileFilter {
+			modelSourceSettingsVersions := lo.Map(
+				profileFilter.SourceSettingsVersions,
+				func(sourceSettingsVersion oapi.SourceSettingsVersionsFilter, _ int) models.SourceSettingsVersionsFilter {
+					return models.SourceSettingsVersionsFilter{
+						Source:   sourceSettingsVersion.Source,
+						Versions: lo.Map(sourceSettingsVersion.Versions, func(version int, _ int) int64 { return int64(version) }),
+					}
+				},
+			)
+
+			return models.ProfileFilter{
+				ProfileID:              int64(profileFilter.ProfileId),
+				SourceSettingsVersions: modelSourceSettingsVersions,
+			}
+		})
+
+		modelFilter.Profiles = lo.ToPtr(modelProfileFilters)
 	}
 
 	if filter.Tags != nil {
