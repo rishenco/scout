@@ -284,7 +284,7 @@ func (s *ScoutStorage) UpdateProfile(ctx context.Context, update models.ProfileU
 	defer func() {
 		rollbackErr := tx.Rollback(ctx)
 
-		if rollbackErr == nil {
+		if rollbackErr == nil || errors.Is(rollbackErr, pgx.ErrTxClosed) {
 			return
 		}
 
@@ -298,7 +298,7 @@ func (s *ScoutStorage) UpdateProfile(ctx context.Context, update models.ProfileU
 		Where(sq.Eq{"id": update.ProfileID}).
 		Set("updated_at", sq.Expr("NOW()"))
 
-	if update.Name != nil {
+	if update.Name != nil && len(*update.Name) > 0 {
 		updateProfileSb = updateProfileSb.Set("name", *update.Name)
 	}
 
