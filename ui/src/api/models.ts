@@ -15,6 +15,7 @@ export interface ProfileSettings {
 export interface Profile {
     id: number;
     name: string;
+    active: boolean;
     created_at?: string;
     updated_at?: string;
     default_settings?: ProfileSettings;
@@ -28,8 +29,15 @@ export interface ProfileSettingsUpdate {
 
 export interface ProfileUpdate {
     name?: string;
+    active?: boolean;
     default_settings?: ProfileSettingsUpdate | null;
     sources_settings?: Record<string, ProfileSettingsUpdate | null>;
+}
+
+export interface ProfileJumpstartRequest {
+    exclude_already_analyzed?: boolean;
+    jumpstart_period?: number;
+    limit?: number;
 }
 
 // Detection-related models
@@ -97,6 +105,12 @@ export interface SubredditSettings {
 
 export interface SubredditProfilesRequest {
     profile_ids: number[];
+}
+
+// Statistics-related models
+export interface ProfileStatistics {
+    manual_tasks: number;
+    auto_tasks: number;
 }
 
 // Represents the top-level API response

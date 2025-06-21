@@ -29,7 +29,7 @@ reddit:
   scraper:
     timeout: 1s # Timeout before making the next reddit API call
     error_timeout: 3s # Timeout before making the next reddit API call after an error
-    timeout_after_full_scan: 3s # Timeout after scanning all available posts from a subreddit
+    timeout_after_full_scan: 1m # Timeout after scanning all available posts from a subreddit
     at_least_one_exhausting_scan: false
     disabled: false # Disable the scraper
   

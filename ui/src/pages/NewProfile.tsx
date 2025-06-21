@@ -5,7 +5,7 @@ import { ArrowLeft } from 'lucide-react';
 import { ProfileEditor } from '@/components/profiles/ProfileEditor';
 import { toast } from "sonner";
 import { 
-  useCombinedCreateProfile, 
+  useCombinedCreateProfile,
 } from '@/api/hooks';
 import type { Profile, ProfileUpdate } from '@/api/models';
 
@@ -17,6 +17,7 @@ export default function NewProfile() {
   const handleCreateProfile = (update: ProfileUpdate, subreddits: string[]) => {
     const profile: Profile = {
       id: 0,
+      active: false,
       name: update.name || "New Profile",
     }
 
@@ -40,7 +41,8 @@ export default function NewProfile() {
     combinedCreateProfile({profile, subreddits}, {
       onSuccess: (id: number) => {
         toast.success("Profile created successfully!");
-        navigate(`/profiles/${id}`);
+        toast.warning("Profile is inactive. Use jumpstart to test it & activate when ready.");
+        navigate(`/profiles/${id}?jumpstart=true`);
       },
       onError: (err: Error) => {
         toast.error(`Failed to create profile: ${err.message}`);
