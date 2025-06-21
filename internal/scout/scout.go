@@ -109,7 +109,15 @@ func (s *Scout) Analyze(
 
 // ScheduleAnalysis adds tasks to the task queue.
 func (s *Scout) ScheduleAnalysis(ctx context.Context, tasks []models.AnalysisTask) error {
-	return s.taskAdder.Add(ctx, tasks)
+	if err := s.taskAdder.Add(ctx, tasks); err != nil {
+		return fmt.Errorf("add tasks: %w", err)
+	}
+
+	s.logger.Info().
+		Int("tasks_count", len(tasks)).
+		Msg("scheduled tasks")
+
+	return nil
 }
 
 // DeleteProfile deletes a given profile from the scout's storage and notifies all sources that the profile has been deleted.

@@ -211,7 +211,7 @@ func (p *TaskProcessor) processTask(ctx context.Context, taskTypes []string, pro
 			Int64("profile_id", task.Parameters.ProfileID).
 			Msg("profile is not active but scheduled task was claimed")
 
-		p.invalidateProfilesCache(ctx) // invalidate caches to avoid claiming more tasks for inactive profiles
+		p.invalidateProfilesCache() // invalidate caches to avoid claiming more tasks for inactive profiles
 
 		return false, nil
 	}
@@ -253,7 +253,7 @@ func (p *TaskProcessor) processTask(ctx context.Context, taskTypes []string, pro
 	return anyTask, nil
 }
 
-func (p *TaskProcessor) invalidateProfilesCache(ctx context.Context) error {
+func (p *TaskProcessor) invalidateProfilesCache() error {
 	p.profilesCacheLock.Lock()
 	defer p.profilesCacheLock.Unlock()
 
@@ -307,6 +307,11 @@ func (p *TaskProcessor) ensureProfilesCacheUnsafe(ctx context.Context) error {
 			p.profilesCache.inactiveProfiles = append(p.profilesCache.inactiveProfiles, profile.ID)
 		}
 	}
+
+	p.logger.Info().
+		Ints64("active_profiles", p.profilesCache.activeProfiles).
+		Ints64("inactive_profiles", p.profilesCache.inactiveProfiles).
+		Msg("profiles cache updated")
 
 	return nil
 }
