@@ -4,13 +4,15 @@ import apiClient from './client';
 import type {
   Profile,
   ProfileUpdate,
+  ProfileJumpstartRequest,
   Detection,
   DetectionFilter,
   DetectionTags,
   DetectionTagsUpdate,
   ListedDetection,
   AnalyzeRequest,
-  SubredditSettings
+  SubredditSettings,
+  ProfileStatistics
 } from './models';
 
 // Profiles
@@ -33,7 +35,7 @@ export function useCreateProfile() {
   const queryClient = useQueryClient();
   return useMutation<number, Error, Profile>({
     mutationFn: (profile) => apiClient.profiles.createProfile(profile),
-    onSuccess: (id, profile) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['profiles'] });
       // queryClient.setQueryData(['profiles', data.id], data);
       // We don't have the complete data, so we just invalidate the cache
@@ -244,6 +246,28 @@ export function useRemoveProfilesFromSubreddit() {
     mutationFn: ({ subreddit, profileIds }) => apiClient.subreddits.removeProfilesFromSubreddit(subreddit, profileIds),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['subreddits'] });
+    },
+  });
+}
+
+// Profile statistics
+export function useProfileStatistics(profileId: number) {
+  return useQuery<ProfileStatistics, Error>({
+    queryKey: ['statistics', profileId],
+    queryFn: () => apiClient.profiles.getProfileStatistics(profileId),
+    enabled: !!profileId,
+  });
+}
+
+// Profile jumpstart
+export function useJumpstartProfile() {
+  const queryClient = useQueryClient();
+  return useMutation<void, Error, { id: number; request: ProfileJumpstartRequest }>({
+    mutationFn: ({ id, request }) => apiClient.profiles.jumpstartProfile(id, request),
+    onSuccess: (_, variables) => {
+      // Invalidate detection queries since new detections might be created
+      queryClient.invalidateQueries({ queryKey: ['detections'] });
+      queryClient.invalidateQueries({ queryKey: ['statistics', variables.id] });
     },
   });
 } 

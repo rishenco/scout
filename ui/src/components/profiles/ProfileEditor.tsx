@@ -41,6 +41,7 @@ export function ProfileEditor({
 
     onSubmit({
       name: name,
+      active: false,
       default_settings: {
         relevancy_filter: relevancyFilterPrompt || '',
         extracted_properties: propertiesPrompts || {},
@@ -51,6 +52,7 @@ export function ProfileEditor({
   useEffect(() => {
     const profileUpdate: ProfileUpdate = {
       name: name,
+      active: false,
       default_settings: {
         relevancy_filter: relevancyFilterPrompt || '',
         extracted_properties: propertiesPrompts || {},

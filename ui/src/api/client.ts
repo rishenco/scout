@@ -8,15 +8,18 @@ import {
   postApiProfiles,
   putApiProfilesByProfileId,
   deleteApiProfilesByProfileId,
+  postApiProfilesByProfileIdJumpstart,
   postApiDetectionsList,
   putApiDetectionsTags,
   postApiAnalyze,
+  getApiStatisticsByProfileId,
   client,
 } from './generated';
 
 import type {
   Profile,
   ProfileUpdate,
+  ProfileJumpstartRequest,
   Detection,
   DetectionFilter,
   DetectionTags,
@@ -25,7 +28,8 @@ import type {
   AnalyzeRequest,
   SubredditSettings,
   DetectionListRequest,
-  DetectionTagUpdateRequest
+  DetectionTagUpdateRequest,
+  ProfileStatistics
 } from './models';
 
 // Configure the client
@@ -136,6 +140,45 @@ export const profilesApi = {
       });
     } catch (error) {
       console.error(`Error deleting profile ${id}:`, error);
+      throw error;
+    }
+  },
+
+  // Get profile statistics
+  async getProfileStatistics(id: number): Promise<ProfileStatistics> {
+    try {
+      const response = await getApiStatisticsByProfileId({
+        path: {
+          profileId: id,
+        },
+      });
+
+      if (response.error) {
+        throw response.error;
+      }
+
+      if (!response.data) {
+        throw new Error('No data returned from API');
+      }
+
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching profile statistics for ${id}:`, error);
+      throw error;
+    }
+  },
+
+  // Jumpstart a profile
+  async jumpstartProfile(id: number, request: ProfileJumpstartRequest): Promise<void> {
+    try {
+      await postApiProfilesByProfileIdJumpstart({
+        path: {
+          profileId: id,
+        },
+        body: request,
+      });
+    } catch (error) {
+      console.error(`Error jumpstarting profile ${id}:`, error);
       throw error;
     }
   },

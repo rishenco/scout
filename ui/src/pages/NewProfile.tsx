@@ -17,6 +17,7 @@ export default function NewProfile() {
   const handleCreateProfile = (update: ProfileUpdate, subreddits: string[]) => {
     const profile: Profile = {
       id: 0,
+      active: false,
       name: update.name || "New Profile",
     }
 
