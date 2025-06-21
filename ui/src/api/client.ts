@@ -1,17 +1,17 @@
-import { createClient } from '@hey-api/client-axios';
 import {
   getApiSourcesRedditSubreddits,
   getApiSourcesRedditSubredditsWithProfile,
   postApiSourcesRedditSubredditsBySubredditAddProfiles,
   postApiSourcesRedditSubredditsBySubredditRemoveProfiles,
   getApiProfiles,
-  getApiProfilesById,
+  getApiProfilesByProfileId,
   postApiProfiles,
-  putApiProfilesById,
-  deleteApiProfilesById,
+  putApiProfilesByProfileId,
+  deleteApiProfilesByProfileId,
   postApiDetectionsList,
   putApiDetectionsTags,
   postApiAnalyze,
+  client,
 } from './generated';
 
 import type {
@@ -28,32 +28,27 @@ import type {
   DetectionTagUpdateRequest
 } from './models';
 
-const config = {
+// Configure the client
+client.setConfig({
   baseURL: 'http://localhost:5601',
-  headers: {
-    // 'Authorization': `Bearer ${token}`,
-  },
-}
-
-const client = createClient(config);
+});
 
 // Set basic auth credentials
 export function setAuthCredentials(token: string) {
-  config.headers = {
-    'Authorization': `Bearer ${token}`,
-  };
-
-  client.setConfig(config);
+  client.setConfig({
+    baseURL: 'http://localhost:5601',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+  });
 }
-
-
 
 // Profiles API
 export const profilesApi = {
   // Get all profiles
   async getProfiles(): Promise<Profile[]> {
     try {
-      const response = await getApiProfiles({client});
+      const response = await getApiProfiles();
       
       if (response.error) {
         throw response.error;
@@ -73,11 +68,10 @@ export const profilesApi = {
   // Get a profile by ID
   async getProfile(id: number): Promise<Profile> {
     try {
-      const response = await getApiProfilesById({
+      const response = await getApiProfilesByProfileId({
         path: {
-          id,
+          profileId: id,
         },
-        client,
       });
 
       if (response.error) {
@@ -100,7 +94,6 @@ export const profilesApi = {
     try {
       const response = await postApiProfiles({
         body: profile,
-        client,
       });
 
       if (response.error) {
@@ -121,12 +114,11 @@ export const profilesApi = {
   // Update a profile
   async updateProfile(id: number, update: ProfileUpdate): Promise<void> {
     try {
-      await putApiProfilesById({
+      await putApiProfilesByProfileId({
         body: update,
         path: {
-          id,
+          profileId: id,
         },
-        client,
       });
     } catch (error) {
       console.error(`Error updating profile ${id}:`, error);
@@ -137,11 +129,10 @@ export const profilesApi = {
   // Delete a profile
   async deleteProfile(id: number): Promise<void> {
     try {
-      await deleteApiProfilesById({
+      await deleteApiProfilesByProfileId({
         path: {
-          id,
+          profileId: id,
         },
-        client,
       });
     } catch (error) {
       console.error(`Error deleting profile ${id}:`, error);
@@ -167,7 +158,6 @@ export const detectionsApi = {
       };
       const response = await postApiDetectionsList({
         body: request,
-        client,
       });
 
       if (response.error) {
@@ -194,7 +184,6 @@ export const detectionsApi = {
       };
       const response = await putApiDetectionsTags({
         body: request,
-        client,
       });
       
       if (response.error) {
@@ -207,7 +196,7 @@ export const detectionsApi = {
 
       return response.data;
     } catch (error) {
-      console.error(`Error updating tags for detection ${detectionId}:`, error);
+      console.error(`Error updating detection tags for ${detectionId}:`, error);
       throw error;
     }
   },
@@ -220,9 +209,8 @@ export const analysisApi = {
     try {
       const response = await postApiAnalyze({
         body: request,
-        client,
       });
-      
+
       if (response.error) {
         throw response.error;
       }
@@ -239,14 +227,12 @@ export const analysisApi = {
   },
 };
 
-// Subreddits API
-export const subredditsApi = {
+// Sources API
+export const sourcesApi = {
   // Get all subreddits
   async getAllSubreddits(): Promise<SubredditSettings[]> {
     try {
-      const response = await getApiSourcesRedditSubreddits({
-        client,
-      });
+      const response = await getApiSourcesRedditSubreddits();
 
       if (response.error) {
         throw response.error;
@@ -263,16 +249,15 @@ export const subredditsApi = {
     }
   },
 
-  // Get subreddits for a profile
+  // Get subreddits for a specific profile
   async getSubredditsForProfile(profileId: number): Promise<SubredditSettings[]> {
     try {
       const response = await getApiSourcesRedditSubredditsWithProfile({
         query: {
           profile_id: profileId,
         },
-        client,
       });
-      
+
       if (response.error) {
         throw response.error;
       }
@@ -298,7 +283,6 @@ export const subredditsApi = {
         body: {
           profile_ids: profileIds,
         },
-        client,
       });
     } catch (error) {
       console.error(`Error adding profiles to subreddit ${subreddit}:`, error);
@@ -309,19 +293,14 @@ export const subredditsApi = {
   // Remove profiles from a subreddit
   async removeProfilesFromSubreddit(subreddit: string, profileIds: number[]): Promise<void> {
     try {
-      const response = await postApiSourcesRedditSubredditsBySubredditRemoveProfiles({
+      await postApiSourcesRedditSubredditsBySubredditRemoveProfiles({
         path: {
           subreddit,
         },
         body: {
           profile_ids: profileIds,
         },
-        client,
       });
-
-      if (response.error) {
-        throw response.error;
-      }
     } catch (error) {
       console.error(`Error removing profiles from subreddit ${subreddit}:`, error);
       throw error;
@@ -335,5 +314,5 @@ export default {
   profiles: profilesApi,
   detections: detectionsApi,
   analysis: analysisApi,
-  subreddits: subredditsApi,
-}; 
+  subreddits: sourcesApi,
+};
