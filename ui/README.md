@@ -30,9 +30,9 @@ Read openapi.yaml for details. It contains api description with comments and exa
 ## Pages
 
 - Home: show a list of profiles, allow to create new one. When profile is selected user goes to it's feed
-- Create new profile: inputs for settings and create button.
-- Profile Feed - shows detections for a profile in reddit-like interface. Allows to filter them. Each post shows information from reddit and can be labeled as relevant/not relevant by user (user classifications in api).
-- Edit Profile:
+- NewProfile: inputs for settings and create button.
+- ProfileDetectionList - shows detections for a profile in reddit-like interface. Allows to filter them. Each post shows information from reddit and can be labeled as relevant/not relevant by user (user classifications in api).
+- EditProfile:
     - left side: profile settings, save button.
     - right side: Similar to tests tab in IDE. List of labeled posts, with visualization of results with current changes. Filters for posts. Buttons to analyze selected/wrong/all posts - when clicked posts are sent for analysis with updated settings. When response is received it should be visualized if the result matches expected one.
 
@@ -43,26 +43,33 @@ Read openapi.yaml for details. It contains api description with comments and exa
 - ProfileList: shows grid of profile cards
     - ProfileCard: shows profile name and subreddits
 
-### New profile page:
+### NewProfile page:
 
 - ProfileEditor
     - PromptInput - multiline input for prompts
     - PropertiesEditor - input for dict Property Name -> Prompt
+    - SubredditSelector - component for selecting subreddits
 
-### Profile Feed page:
+### ProfileDetectionList page:
 
-- PostFeed - List of posts with filters, infinitely scrolls
-    - FeedFilters
-    - PostCard - shows post in reddit style. Does not show comments
-        - PostReaction - allows to like/dislike relevancy of the post
+- DetectionList - List of detections with filters, infinitely scrolls
+    - DetectionFilter - filters for detections
+    - DetectionCard - shows detection in reddit style. Does not show comments
+    - RedditDetectionCard - specialized card for reddit detections
+        - RedditPostBody - displays reddit post content
+        - DetectionReaction - allows to like/dislike relevancy of the detection
+    - RelevancyBadge - shows relevancy status
+    - DetectionDialog - dialog for detection details
 
-### Edit Profile page:
+### EditProfile page:
 
 - ProfileEditor (initialized with existing profile)
-- TestRunner: Shows buttons to run tests
-    - TestStats: shows basic stats on current stats
-    - TestPostList: List of labeled posts (all, without pagination)
-        - TestPostCard: Compactly displays Post title, expected result, actual result, highlights if test is failed. Allows to select card individually
+- Playground: Shows testing interface for profiles
+    - PlaygroundStats: shows basic stats on current results
+    - PlaygroundPostList: List of labeled posts with data table interface
+        - Uses data-table component for displaying posts
+        - columns.tsx defines table structure
+        - models.ts contains type definitions
 
 
 ### Common:
