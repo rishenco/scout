@@ -19,6 +19,9 @@ export const ProfileSchema = {
         name: {
             type: 'string'
         },
+        active: {
+            type: 'boolean'
+        },
         created_at: {
             type: 'string'
         },
@@ -35,7 +38,7 @@ export const ProfileSchema = {
             }
         }
     },
-    required: ['id', 'name']
+    required: ['id', 'name', 'active']
 } as const;
 
 export const ProfileSettingsSchema = {

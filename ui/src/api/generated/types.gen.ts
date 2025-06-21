@@ -7,6 +7,7 @@ export type Error = {
 export type Profile = {
     id: number;
     name: string;
+    active: boolean;
     created_at?: string;
     updated_at?: string;
     default_settings?: ProfileSettings;
