@@ -109,6 +109,14 @@ func (s *Scout) Analyze(
 
 // ScheduleAnalysis adds tasks to the task queue.
 func (s *Scout) ScheduleAnalysis(ctx context.Context, tasks []models.AnalysisTask) error {
+	for i := range tasks {
+		task := &tasks[i]
+
+		if task.Type == "" {
+			task.Type = models.ScheduledTaskType
+		}
+	}
+
 	if err := s.taskAdder.Add(ctx, tasks); err != nil {
 		return fmt.Errorf("add tasks: %w", err)
 	}
