@@ -403,6 +403,8 @@ components:
           type: integer
         name:
           type: string
+        active:
+          type: boolean
         created_at:
           type: string
         updated_at:
@@ -416,6 +418,7 @@ components:
       required:
         - id
         - name
+        - active
 
     ProfileSettings:
       type: object

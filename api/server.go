@@ -430,6 +430,7 @@ func profileFromModel(profile models.Profile) oapi.Profile {
 		CreatedAt:       lo.ToPtr(profile.CreatedAt.Format(time.RFC3339)),
 		Id:              int(profile.ID),
 		Name:            profile.Name,
+		Active:          profile.Active,
 		DefaultSettings: nil,
 		SourcesSettings: &map[string]oapi.ProfileSettings{},
 		UpdatedAt:       lo.ToPtr(profile.UpdatedAt.Format(time.RFC3339)),
