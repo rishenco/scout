@@ -508,6 +508,7 @@ func profileUpdateFromOapi(profileID int64, update oapi.ProfileUpdate) models.Pr
 	modelUpdate := models.ProfileUpdate{
 		ProfileID:       profileID,
 		Name:            update.Name,
+		Active:          update.Active,
 		DefaultSettings: nullable.Unset[models.ProfileSettingsUpdate](),
 		SourcesSettings: map[string]*models.ProfileSettingsUpdate{},
 	}
