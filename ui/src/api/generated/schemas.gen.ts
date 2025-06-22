@@ -341,3 +341,22 @@ export const ProfileStatisticsSchema = {
     },
     required: ['manual_tasks', 'auto_tasks']
 } as const;
+
+export const AnalysisTaskParametersSchema = {
+    type: 'object',
+    properties: {
+        source: {
+            type: 'string'
+        },
+        source_id: {
+            type: 'string'
+        },
+        profile_id: {
+            type: 'integer'
+        },
+        should_save: {
+            type: 'boolean'
+        }
+    },
+    required: ['source', 'source_id', 'profile_id', 'should_save']
+} as const;

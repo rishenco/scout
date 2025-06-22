@@ -135,6 +135,13 @@ export type ProfileStatistics = {
     auto_tasks: number;
 };
 
+export type AnalysisTaskParameters = {
+    source: string;
+    source_id: string;
+    profile_id: number;
+    should_save: boolean;
+};
+
 export type GetApiProfilesResponse = (Array<Profile>);
 
 export type GetApiProfilesError = (unknown | Error);
@@ -190,6 +197,17 @@ export type PostApiProfilesByProfileIdJumpstartData = {
 export type PostApiProfilesByProfileIdJumpstartResponse = (void);
 
 export type PostApiProfilesByProfileIdJumpstartError = (unknown | Error);
+
+export type PostApiProfilesByProfileIdDryJumpstartData = {
+    body: ProfileJumpstartRequest;
+    path: {
+        profileId: number;
+    };
+};
+
+export type PostApiProfilesByProfileIdDryJumpstartResponse = (Array<AnalysisTaskParameters>);
+
+export type PostApiProfilesByProfileIdDryJumpstartError = (unknown | Error);
 
 export type PostApiDetectionsListData = {
     body: DetectionListRequest;

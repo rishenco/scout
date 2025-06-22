@@ -27,6 +27,14 @@ const (
 	BasicAuthScopes = "basicAuth.Scopes"
 )
 
+// AnalysisTaskParameters defines model for AnalysisTaskParameters.
+type AnalysisTaskParameters struct {
+	ProfileId  int    `json:"profile_id"`
+	ShouldSave bool   `json:"should_save"`
+	Source     string `json:"source"`
+	SourceId   string `json:"source_id"`
+}
+
 // AnalyzeRequest defines model for AnalyzeRequest.
 type AnalyzeRequest struct {
 	ExtractedProperties map[string]string `json:"extracted_properties"`
@@ -192,6 +200,9 @@ type PostApiProfilesJSONRequestBody = Profile
 // PutApiProfilesProfileIdJSONRequestBody defines body for PutApiProfilesProfileId for application/json ContentType.
 type PutApiProfilesProfileIdJSONRequestBody = ProfileUpdate
 
+// PostApiProfilesProfileIdDryJumpstartJSONRequestBody defines body for PostApiProfilesProfileIdDryJumpstart for application/json ContentType.
+type PostApiProfilesProfileIdDryJumpstartJSONRequestBody = ProfileJumpstartRequest
+
 // PostApiProfilesProfileIdJumpstartJSONRequestBody defines body for PostApiProfilesProfileIdJumpstart for application/json ContentType.
 type PostApiProfilesProfileIdJumpstartJSONRequestBody = ProfileJumpstartRequest
 
@@ -307,6 +318,11 @@ type ClientInterface interface {
 	PutApiProfilesProfileIdWithBody(ctx context.Context, profileId int, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	PutApiProfilesProfileId(ctx context.Context, profileId int, body PutApiProfilesProfileIdJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// PostApiProfilesProfileIdDryJumpstartWithBody request with any body
+	PostApiProfilesProfileIdDryJumpstartWithBody(ctx context.Context, profileId int, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	PostApiProfilesProfileIdDryJumpstart(ctx context.Context, profileId int, body PostApiProfilesProfileIdDryJumpstartJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// PostApiProfilesProfileIdJumpstartWithBody request with any body
 	PostApiProfilesProfileIdJumpstartWithBody(ctx context.Context, profileId int, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -479,6 +495,30 @@ func (c *Client) PutApiProfilesProfileIdWithBody(ctx context.Context, profileId 
 
 func (c *Client) PutApiProfilesProfileId(ctx context.Context, profileId int, body PutApiProfilesProfileIdJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewPutApiProfilesProfileIdRequest(c.Server, profileId, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) PostApiProfilesProfileIdDryJumpstartWithBody(ctx context.Context, profileId int, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPostApiProfilesProfileIdDryJumpstartRequestWithBody(c.Server, profileId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) PostApiProfilesProfileIdDryJumpstart(ctx context.Context, profileId int, body PostApiProfilesProfileIdDryJumpstartJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPostApiProfilesProfileIdDryJumpstartRequest(c.Server, profileId, body)
 	if err != nil {
 		return nil, err
 	}
@@ -899,6 +939,53 @@ func NewPutApiProfilesProfileIdRequestWithBody(server string, profileId int, con
 	return req, nil
 }
 
+// NewPostApiProfilesProfileIdDryJumpstartRequest calls the generic PostApiProfilesProfileIdDryJumpstart builder with application/json body
+func NewPostApiProfilesProfileIdDryJumpstartRequest(server string, profileId int, body PostApiProfilesProfileIdDryJumpstartJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewPostApiProfilesProfileIdDryJumpstartRequestWithBody(server, profileId, "application/json", bodyReader)
+}
+
+// NewPostApiProfilesProfileIdDryJumpstartRequestWithBody generates requests for PostApiProfilesProfileIdDryJumpstart with any type of body
+func NewPostApiProfilesProfileIdDryJumpstartRequestWithBody(server string, profileId int, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "profileId", runtime.ParamLocationPath, profileId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/profiles/%s/dry_jumpstart", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
 // NewPostApiProfilesProfileIdJumpstartRequest calls the generic PostApiProfilesProfileIdJumpstart builder with application/json body
 func NewPostApiProfilesProfileIdJumpstartRequest(server string, profileId int, body PostApiProfilesProfileIdJumpstartJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
@@ -1223,6 +1310,11 @@ type ClientWithResponsesInterface interface {
 
 	PutApiProfilesProfileIdWithResponse(ctx context.Context, profileId int, body PutApiProfilesProfileIdJSONRequestBody, reqEditors ...RequestEditorFn) (*PutApiProfilesProfileIdResponse, error)
 
+	// PostApiProfilesProfileIdDryJumpstartWithBodyWithResponse request with any body
+	PostApiProfilesProfileIdDryJumpstartWithBodyWithResponse(ctx context.Context, profileId int, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PostApiProfilesProfileIdDryJumpstartResponse, error)
+
+	PostApiProfilesProfileIdDryJumpstartWithResponse(ctx context.Context, profileId int, body PostApiProfilesProfileIdDryJumpstartJSONRequestBody, reqEditors ...RequestEditorFn) (*PostApiProfilesProfileIdDryJumpstartResponse, error)
+
 	// PostApiProfilesProfileIdJumpstartWithBodyWithResponse request with any body
 	PostApiProfilesProfileIdJumpstartWithBodyWithResponse(ctx context.Context, profileId int, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PostApiProfilesProfileIdJumpstartResponse, error)
 
@@ -1426,6 +1518,29 @@ func (r PutApiProfilesProfileIdResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r PutApiProfilesProfileIdResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type PostApiProfilesProfileIdDryJumpstartResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *[]AnalysisTaskParameters
+	JSON500      *Error
+}
+
+// Status returns HTTPResponse.Status
+func (r PostApiProfilesProfileIdDryJumpstartResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r PostApiProfilesProfileIdDryJumpstartResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -1677,6 +1792,23 @@ func (c *ClientWithResponses) PutApiProfilesProfileIdWithResponse(ctx context.Co
 		return nil, err
 	}
 	return ParsePutApiProfilesProfileIdResponse(rsp)
+}
+
+// PostApiProfilesProfileIdDryJumpstartWithBodyWithResponse request with arbitrary body returning *PostApiProfilesProfileIdDryJumpstartResponse
+func (c *ClientWithResponses) PostApiProfilesProfileIdDryJumpstartWithBodyWithResponse(ctx context.Context, profileId int, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PostApiProfilesProfileIdDryJumpstartResponse, error) {
+	rsp, err := c.PostApiProfilesProfileIdDryJumpstartWithBody(ctx, profileId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePostApiProfilesProfileIdDryJumpstartResponse(rsp)
+}
+
+func (c *ClientWithResponses) PostApiProfilesProfileIdDryJumpstartWithResponse(ctx context.Context, profileId int, body PostApiProfilesProfileIdDryJumpstartJSONRequestBody, reqEditors ...RequestEditorFn) (*PostApiProfilesProfileIdDryJumpstartResponse, error) {
+	rsp, err := c.PostApiProfilesProfileIdDryJumpstart(ctx, profileId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePostApiProfilesProfileIdDryJumpstartResponse(rsp)
 }
 
 // PostApiProfilesProfileIdJumpstartWithBodyWithResponse request with arbitrary body returning *PostApiProfilesProfileIdJumpstartResponse
@@ -2009,6 +2141,39 @@ func ParsePutApiProfilesProfileIdResponse(rsp *http.Response) (*PutApiProfilesPr
 	return response, nil
 }
 
+// ParsePostApiProfilesProfileIdDryJumpstartResponse parses an HTTP response from a PostApiProfilesProfileIdDryJumpstartWithResponse call
+func ParsePostApiProfilesProfileIdDryJumpstartResponse(rsp *http.Response) (*PostApiProfilesProfileIdDryJumpstartResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &PostApiProfilesProfileIdDryJumpstartResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest []AnalysisTaskParameters
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParsePostApiProfilesProfileIdJumpstartResponse parses an HTTP response from a PostApiProfilesProfileIdJumpstartWithResponse call
 func ParsePostApiProfilesProfileIdJumpstartResponse(rsp *http.Response) (*PostApiProfilesProfileIdJumpstartResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -2212,6 +2377,9 @@ type ServerInterface interface {
 	// Update a profile by ID
 	// (PUT /api/profiles/{profileId})
 	PutApiProfilesProfileId(c *gin.Context, profileId int)
+	// Dry jumpstart a profile - load tasks to be spawned
+	// (POST /api/profiles/{profileId}/dry_jumpstart)
+	PostApiProfilesProfileIdDryJumpstart(c *gin.Context, profileId int)
 	// Jumpstart a profile - run analysis on old posts
 	// (POST /api/profiles/{profileId}/jumpstart)
 	PostApiProfilesProfileIdJumpstart(c *gin.Context, profileId int)
@@ -2392,6 +2560,32 @@ func (siw *ServerInterfaceWrapper) PutApiProfilesProfileId(c *gin.Context) {
 	}
 
 	siw.Handler.PutApiProfilesProfileId(c, profileId)
+}
+
+// PostApiProfilesProfileIdDryJumpstart operation middleware
+func (siw *ServerInterfaceWrapper) PostApiProfilesProfileIdDryJumpstart(c *gin.Context) {
+
+	var err error
+
+	// ------------- Path parameter "profileId" -------------
+	var profileId int
+
+	err = runtime.BindStyledParameterWithOptions("simple", "profileId", c.Param("profileId"), &profileId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter profileId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	c.Set(BasicAuthScopes, []string{})
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.PostApiProfilesProfileIdDryJumpstart(c, profileId)
 }
 
 // PostApiProfilesProfileIdJumpstart operation middleware
@@ -2583,6 +2777,7 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.DELETE(options.BaseURL+"/api/profiles/:profileId", wrapper.DeleteApiProfilesProfileId)
 	router.GET(options.BaseURL+"/api/profiles/:profileId", wrapper.GetApiProfilesProfileId)
 	router.PUT(options.BaseURL+"/api/profiles/:profileId", wrapper.PutApiProfilesProfileId)
+	router.POST(options.BaseURL+"/api/profiles/:profileId/dry_jumpstart", wrapper.PostApiProfilesProfileIdDryJumpstart)
 	router.POST(options.BaseURL+"/api/profiles/:profileId/jumpstart", wrapper.PostApiProfilesProfileIdJumpstart)
 	router.GET(options.BaseURL+"/api/sources/reddit/subreddits", wrapper.GetApiSourcesRedditSubreddits)
 	router.POST(options.BaseURL+"/api/sources/reddit/subreddits/:subreddit/add_profiles", wrapper.PostApiSourcesRedditSubredditsSubredditAddProfiles)
@@ -2847,6 +3042,41 @@ func (response PutApiProfilesProfileId500JSONResponse) VisitPutApiProfilesProfil
 	return json.NewEncoder(w).Encode(response)
 }
 
+type PostApiProfilesProfileIdDryJumpstartRequestObject struct {
+	ProfileId int `json:"profileId"`
+	Body      *PostApiProfilesProfileIdDryJumpstartJSONRequestBody
+}
+
+type PostApiProfilesProfileIdDryJumpstartResponseObject interface {
+	VisitPostApiProfilesProfileIdDryJumpstartResponse(w http.ResponseWriter) error
+}
+
+type PostApiProfilesProfileIdDryJumpstart200JSONResponse []AnalysisTaskParameters
+
+func (response PostApiProfilesProfileIdDryJumpstart200JSONResponse) VisitPostApiProfilesProfileIdDryJumpstartResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PostApiProfilesProfileIdDryJumpstart404Response struct {
+}
+
+func (response PostApiProfilesProfileIdDryJumpstart404Response) VisitPostApiProfilesProfileIdDryJumpstartResponse(w http.ResponseWriter) error {
+	w.WriteHeader(404)
+	return nil
+}
+
+type PostApiProfilesProfileIdDryJumpstart500JSONResponse Error
+
+func (response PostApiProfilesProfileIdDryJumpstart500JSONResponse) VisitPostApiProfilesProfileIdDryJumpstartResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type PostApiProfilesProfileIdJumpstartRequestObject struct {
 	ProfileId int `json:"profileId"`
 	Body      *PostApiProfilesProfileIdJumpstartJSONRequestBody
@@ -3100,6 +3330,9 @@ type StrictServerInterface interface {
 	// Update a profile by ID
 	// (PUT /api/profiles/{profileId})
 	PutApiProfilesProfileId(ctx context.Context, request PutApiProfilesProfileIdRequestObject) (PutApiProfilesProfileIdResponseObject, error)
+	// Dry jumpstart a profile - load tasks to be spawned
+	// (POST /api/profiles/{profileId}/dry_jumpstart)
+	PostApiProfilesProfileIdDryJumpstart(ctx context.Context, request PostApiProfilesProfileIdDryJumpstartRequestObject) (PostApiProfilesProfileIdDryJumpstartResponseObject, error)
 	// Jumpstart a profile - run analysis on old posts
 	// (POST /api/profiles/{profileId}/jumpstart)
 	PostApiProfilesProfileIdJumpstart(ctx context.Context, request PostApiProfilesProfileIdJumpstartRequestObject) (PostApiProfilesProfileIdJumpstartResponseObject, error)
@@ -3378,6 +3611,41 @@ func (sh *strictHandler) PutApiProfilesProfileId(ctx *gin.Context, profileId int
 	}
 }
 
+// PostApiProfilesProfileIdDryJumpstart operation middleware
+func (sh *strictHandler) PostApiProfilesProfileIdDryJumpstart(ctx *gin.Context, profileId int) {
+	var request PostApiProfilesProfileIdDryJumpstartRequestObject
+
+	request.ProfileId = profileId
+
+	var body PostApiProfilesProfileIdDryJumpstartJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		ctx.Status(http.StatusBadRequest)
+		ctx.Error(err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.PostApiProfilesProfileIdDryJumpstart(ctx, request.(PostApiProfilesProfileIdDryJumpstartRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PostApiProfilesProfileIdDryJumpstart")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(PostApiProfilesProfileIdDryJumpstartResponseObject); ok {
+		if err := validResponse.VisitPostApiProfilesProfileIdDryJumpstartResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // PostApiProfilesProfileIdJumpstart operation middleware
 func (sh *strictHandler) PostApiProfilesProfileIdJumpstart(ctx *gin.Context, profileId int) {
 	var request PostApiProfilesProfileIdJumpstartRequestObject
@@ -3565,36 +3833,38 @@ func (sh *strictHandler) GetApiStatisticsProfileId(ctx *gin.Context, profileId i
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
+	"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",
+	"//9xiWqJlTQAAA==",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

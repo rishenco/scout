@@ -216,24 +216,53 @@ func (s *Scout) JumpstartProfile(
 	jumpstartPeriod *int,
 	limit *int,
 ) error {
+	analysisTaskParameters, err := s.DryJumpstartProfile(ctx, profileID, excludeAlreadyAnalyzed, jumpstartPeriod, limit)
+	if err != nil {
+		return fmt.Errorf("dry jumpstart profile: %w", err)
+	}
+
+	analysisTasks := lo.Map(analysisTaskParameters, func(taskParameters models.AnalysisParameters, _ int) models.AnalysisTask {
+		return models.AnalysisTask{
+			Type:       models.ManualTaskType,
+			Parameters: taskParameters,
+		}
+	})
+
+	if err := s.taskAdder.Add(ctx, analysisTasks); err != nil {
+		return fmt.Errorf("add analysis tasks: %w", err)
+	}
+
+	s.logger.Info().
+		Int64("profile_id", profileID).
+		Int("tasks_count", len(analysisTasks)).
+		Msg("scheduled tasks for profile jumpstart")
+
+	return nil
+}
+
+func (s *Scout) DryJumpstartProfile(
+	ctx context.Context,
+	profileID int64,
+	excludeAlreadyAnalyzed bool,
+	jumpstartPeriod *int,
+	limit *int,
+) (taskParameters []models.AnalysisParameters, err error) {
 	sourceToIDs := make(map[string][]string)
 
 	for source, toolkit := range s.toolkits {
 		sourceIDs, err := toolkit.GetScheduledSourceIDs(ctx, []int64{profileID}, jumpstartPeriod, limit)
 		if err != nil {
-			return fmt.Errorf("get source IDs for analysis (source=%s): %w", source, err)
+			return nil, fmt.Errorf("get source IDs for analysis (source=%s): %w", source, err)
 		}
 
 		sourceToIDs[source] = sourceIDs
 	}
 
-	var analysisTasks []models.AnalysisTask
-
 	for source, sourceIDs := range sourceToIDs {
 		if excludeAlreadyAnalyzed {
 			presentSourceIDs, err := s.storage.GetPresentDetectionsForProfile(ctx, profileID, source, sourceIDs)
 			if err != nil {
-				return fmt.Errorf("get present detections (source=%s): %w", source, err)
+				return nil, fmt.Errorf("get present detections (source=%s): %w", source, err)
 			}
 
 			presentSourceIDsSet := make(map[string]struct{})
@@ -249,26 +278,14 @@ func (s *Scout) JumpstartProfile(
 		}
 
 		for _, sourceID := range sourceIDs {
-			analysisTasks = append(analysisTasks, models.AnalysisTask{
-				Type: models.ManualTaskType,
-				Parameters: models.AnalysisParameters{
-					Source:     source,
-					SourceID:   sourceID,
-					ProfileID:  profileID,
-					ShouldSave: true,
-				},
+			taskParameters = append(taskParameters, models.AnalysisParameters{
+				Source:     source,
+				SourceID:   sourceID,
+				ProfileID:  profileID,
+				ShouldSave: true,
 			})
 		}
 	}
 
-	if err := s.taskAdder.Add(ctx, analysisTasks); err != nil {
-		return fmt.Errorf("add analysis tasks: %w", err)
-	}
-
-	s.logger.Info().
-		Int64("profile_id", profileID).
-		Int("tasks_count", len(analysisTasks)).
-		Msg("scheduled tasks for profile jumpstart")
-
-	return nil
+	return taskParameters, nil
 }

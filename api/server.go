@@ -42,6 +42,13 @@ type scout interface {
 		jumpstartPeriod *int,
 		limit *int,
 	) error
+	DryJumpstartProfile(
+		ctx context.Context,
+		profileID int64,
+		excludeAlreadyAnalyzed bool,
+		jumpstartPeriod *int,
+		limit *int,
+	) ([]models.AnalysisParameters, error)
 }
 
 type redditToolkit interface {
@@ -419,6 +426,46 @@ func (s *Server) PostApiProfilesProfileIdJumpstart(
 	}
 
 	return oapi.PostApiProfilesProfileIdJumpstart204Response{}, nil
+}
+
+// PostApiProfilesProfileIdDryJumpstart implements oapi.StrictServerInterface.
+//
+//nolint:revive,staticcheck // naming is dictated by oapi-codegen
+func (s *Server) PostApiProfilesProfileIdDryJumpstart(
+	ctx context.Context,
+	request oapi.PostApiProfilesProfileIdDryJumpstartRequestObject,
+) (oapi.PostApiProfilesProfileIdDryJumpstartResponseObject, error) {
+	var jumpstartDays, jumpstartLimit *int
+	var excludeAlreadyAnalyzed bool
+
+	if request.Body.JumpstartPeriod != nil {
+		jumpstartDays = request.Body.JumpstartPeriod
+	}
+
+	if request.Body.Limit != nil {
+		jumpstartLimit = request.Body.Limit
+	}
+
+	if request.Body.ExcludeAlreadyAnalyzed != nil {
+		excludeAlreadyAnalyzed = *request.Body.ExcludeAlreadyAnalyzed
+	}
+
+	tasks, err := s.scout.DryJumpstartProfile(ctx, int64(request.ProfileId), excludeAlreadyAnalyzed, jumpstartDays, jumpstartLimit)
+	if err != nil {
+		//nolint:nilerr // error is passed to response
+		return oapi.PostApiProfilesProfileIdDryJumpstart500JSONResponse{Error: err.Error()}, nil
+	}
+
+	tasksOapi := lo.Map(tasks, func(task models.AnalysisParameters, _ int) oapi.AnalysisTaskParameters {
+		return oapi.AnalysisTaskParameters{
+			Source:     task.Source,
+			SourceId:   task.SourceID,
+			ProfileId:  int(task.ProfileID),
+			ShouldSave: task.ShouldSave,
+		}
+	})
+
+	return oapi.PostApiProfilesProfileIdDryJumpstart200JSONResponse(tasksOapi), nil
 }
 
 // GetApiStatisticsProfileId implements oapi.StrictServerInterface.
