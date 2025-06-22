@@ -6,6 +6,7 @@ export interface Error {
 
 // Profile-related models
 export interface ProfileSettings {
+    version: number;
     relevancy_filter: string;
     extracted_properties: Record<string, string>;
     updated_at?: string;
@@ -70,10 +71,20 @@ export interface DetectionTagsFilter {
 }
 
 export interface DetectionFilter {
-    profiles?: number[];
+    profiles?: ProfileFilter[];
     sources?: string[];
     is_relevant?: boolean;
     tags?: DetectionTagsFilter;
+}
+
+export interface ProfileFilter {
+    profile_id: number;
+    source_settings_versions: SourceSettingsVersionsFilter[] | null;
+}
+
+export interface SourceSettingsVersionsFilter {
+    source?: string;
+    versions: number[];
 }
 
 export interface DetectionListRequest {

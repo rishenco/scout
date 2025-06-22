@@ -44,7 +44,7 @@ export function PlaygroundPostList({
     hasNextPage,
     isFetchingNextPage
   } = useInfiniteDetections({
-    profiles: [profileIdNumber],
+    profiles: [{profile_id: profileIdNumber, source_settings_versions: null}],
     tags: {
       relevancy_detected_correctly: [true, false]
     }

@@ -62,7 +62,7 @@ func (s *ScoutStorage) GetProfile(
 	`
 
 	getProfileSettingsQuery := `
-		SELECT ps.source, ps.profile_id, ps.settings_version, ps.relevancy_filter, ps.extracted_properties, ps.created_at, ps.updated_at
+		SELECT ps.source, ps.profile_id, ps.version, ps.relevancy_filter, ps.extracted_properties, ps.created_at, ps.updated_at
 		FROM scout.profile_settings ps
 		WHERE ps.profile_id = $1
 	`
@@ -124,7 +124,7 @@ func (s *ScoutStorage) GetAllProfiles(ctx context.Context) ([]models.Profile, er
 	`
 
 	getProfileSettingsQuery := `
-		SELECT ps.profile_id, ps.source, ps.settings_version, ps.relevancy_filter, ps.extracted_properties, ps.created_at, ps.updated_at
+		SELECT ps.profile_id, ps.source, ps.version, ps.relevancy_filter, ps.extracted_properties, ps.created_at, ps.updated_at
 		FROM scout.profile_settings ps
 	`
 

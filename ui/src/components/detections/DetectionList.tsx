@@ -13,7 +13,7 @@ interface DetectionListProps {
 export function DetectionList({ profileId }: DetectionListProps) {
   const [filter, setFilter] = useState<DetectionFilter>({
     is_relevant: true,
-    profiles: [profileId],
+    profiles: [{profile_id: profileId, source_settings_versions: null}],
   })
   
   const [isDialogOpen, setIsDialogOpen] = useState(false)

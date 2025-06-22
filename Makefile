@@ -1,5 +1,5 @@
-.PHONY: run
-run:
+.PHONY: scout
+scout:
 	set -a && \
 	. ./.env && \
 	set +a && \
