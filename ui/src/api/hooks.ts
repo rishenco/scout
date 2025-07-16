@@ -12,7 +12,8 @@ import type {
   ListedDetection,
   AnalyzeRequest,
   SubredditSettings,
-  ProfileStatistics
+  ProfileStatistics,
+  AnalysisTaskParameters
 } from './models';
 
 // Profiles
@@ -268,6 +269,23 @@ export function useJumpstartProfile() {
       // Invalidate detection queries since new detections might be created
       queryClient.invalidateQueries({ queryKey: ['detections'] });
       queryClient.invalidateQueries({ queryKey: ['statistics', variables.id] });
+    },
+  });
+}
+
+// Profile dry jumpstart
+export function useDryJumpstartProfile() {
+  return useMutation<AnalysisTaskParameters[], Error, { id: number; request: ProfileJumpstartRequest }>({
+    mutationFn: ({ id, request }) => apiClient.profiles.dryJumpstartProfile(id, request),
+  });
+}
+
+// Profile dry jumpstart count - returns just the count of available tasks
+export function useDryJumpstartCount() {
+  return useMutation<number, Error, { id: number; request: ProfileJumpstartRequest }>({
+    mutationFn: async ({ id, request }) => {
+      const tasks = await apiClient.profiles.dryJumpstartProfile(id, request);
+      return tasks.length;
     },
   });
 } 

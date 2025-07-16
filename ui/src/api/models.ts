@@ -79,7 +79,7 @@ export interface DetectionFilter {
 
 export interface ProfileFilter {
     profile_id: number;
-    source_settings_versions: SourceSettingsVersionsFilter[] | null;
+    source_settings_versions: SourceSettingsVersionsFilter[];
 }
 
 export interface SourceSettingsVersionsFilter {
@@ -122,6 +122,14 @@ export interface SubredditProfilesRequest {
 export interface ProfileStatistics {
     manual_tasks: number;
     auto_tasks: number;
+}
+
+// Analysis task parameters for dry jumpstart
+export interface AnalysisTaskParameters {
+    source: string;
+    source_id: string;
+    profile_id: number;
+    should_save: boolean;
 }
 
 // Represents the top-level API response

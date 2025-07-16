@@ -9,6 +9,7 @@ import {
   putApiProfilesByProfileId,
   deleteApiProfilesByProfileId,
   postApiProfilesByProfileIdJumpstart,
+  postApiProfilesByProfileIdDryJumpstart,
   postApiDetectionsList,
   putApiDetectionsTags,
   postApiAnalyze,
@@ -29,7 +30,8 @@ import type {
   SubredditSettings,
   DetectionListRequest,
   DetectionTagUpdateRequest,
-  ProfileStatistics
+  ProfileStatistics,
+  AnalysisTaskParameters
 } from './models';
 
 // Configure the client
@@ -179,6 +181,31 @@ export const profilesApi = {
       });
     } catch (error) {
       console.error(`Error jumpstarting profile ${id}:`, error);
+      throw error;
+    }
+  },
+
+  // Dry jumpstart a profile - load tasks to be spawned
+  async dryJumpstartProfile(id: number, request: ProfileJumpstartRequest): Promise<AnalysisTaskParameters[]> {
+    try {
+      const response = await postApiProfilesByProfileIdDryJumpstart({
+        path: {
+          profileId: id,
+        },
+        body: request,
+      });
+
+      if (response.error) {
+        throw response.error;
+      }
+
+      if (!response.data) {
+        throw new Error('No data returned from API');
+      }
+
+      return response.data;
+    } catch (error) {
+      console.error(`Error dry jumpstarting profile ${id}:`, error);
       throw error;
     }
   },

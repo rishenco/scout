@@ -1,6 +1,6 @@
 # Scout uses Gemini API to analyze posts.
 google:
-  model: "gemini-2.5-flash-preview-04-17" # Model name
+  model: "gemini-2.5-flash" # Model name
   # model: "gemini-2.0-flash" # Model name
   temperature: 0.25 # Temperature for the model
 
