@@ -44,6 +44,13 @@ export function PropertiesEditor({
     });
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAddProperty();
+    }
+  };
+
   return (
     <div className={`space-y-4 ${className}`}>
       <div>
@@ -80,6 +87,7 @@ export function PropertiesEditor({
           placeholder="New property name"
           value={newPropertyName}
           onChange={(e) => setNewPropertyName(e.target.value)}
+          onKeyDown={handleKeyDown}
           className="flex-1"
         />
         <Button onClick={handleAddProperty} disabled={!newPropertyName.trim()}>
@@ -89,4 +97,4 @@ export function PropertiesEditor({
       </div>
     </div>
   );
-} 
+}
