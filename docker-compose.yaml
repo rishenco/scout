@@ -44,6 +44,14 @@ services:
     ports:
       - "5601:5601"
     restart: unless-stopped
+      
+  ui:
+    build:
+      context: .
+      dockerfile: ./Dockerfile.ui
+    ports:
+      - "3000:80"
+    restart: unless-stopped
 
 volumes:
   postgres_data: 

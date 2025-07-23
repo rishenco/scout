@@ -36,3 +36,4 @@ __debug_bin*
 node_modules
 
 .idea
+*.drawio.bkp

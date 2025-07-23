@@ -1,0 +1,36 @@
+# Use Node.js 20 alpine as base image
+FROM node:20-alpine
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files
+COPY ui/package.json ui/package-lock.json ./
+
+# Install dependencies
+RUN npm install
+
+# Copy API specification and UI source
+COPY api/ ../api/
+COPY ui/ .
+
+# Generate API client
+RUN npm run generate-api
+
+# Build the application (skip TypeScript compilation, use only Vite)
+RUN npx vite build
+
+# Use nginx to serve the built files
+FROM nginx:alpine
+
+# Copy built assets
+COPY --from=0 /app/dist /usr/share/nginx/html
+
+# Copy nginx configuration
+COPY ui/nginx.conf /etc/nginx/nginx.conf
+
+# Expose port
+EXPOSE 80
+
+# Start nginx
+CMD ["nginx", "-g", "daemon off;"]

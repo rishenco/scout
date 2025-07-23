@@ -1,131 +1,83 @@
-# Scout
+<h1 align="center">
+  Scout
+</h1>
 
-<Description of Scout functionality>
+<p align="center">
+  <i align="center">AI-based Reddit post aggregator 🚀</i>
+</p>
+
+<p align="center">
+    <img src="./assets/scout-ui.png" alt="scout-ui"/>
+</p>
 
 
+## Introduction
 
-## Setup
+`Scout` reads subreddits for you and extracts data from "interesting" posts based on your preferences.
+
+## How to run
 
 ### Prerequisites
 
-- Go 1.20 or higher
-- PostgreSQL database
-- Reddit API credentials
-- OpenAI API key
+First of all, you need to obtain Reddit and Gemini API credentials.
 
-### Environment Variables
+Reddit API credentials are optional, you can use anonymous mode but it will have lower rate limits.
 
-Copy these to a `.env` file:
+<details>
+<summary>Reddit API credentials</summary>
 
-```
-# OpenAI
-OPENAI_KEY=your_openai_api_key
+1. Go to [Reddit Developer](https://www.reddit.com/prefs/apps/) and create a new app.
+2. Fill in the form:
+   - Name: `scout`
+   - Type: `script`
+   - Redirect URI: `http://example.com`
+3. Click `create app`
+</details>
 
-# Postgres
-POSTGRES_CONN_STRING=postgres://username:password@localhost:5432/dbname
+<details>
+<summary>Gemini API credentials</summary>
 
-# Reddit API
-REDDIT_CLIENT_ID=your_reddit_client_id
-REDDIT_CLIENT_SECRET=your_reddit_client_secret
-REDDIT_USERNAME=your_reddit_username
-REDDIT_PASSWORD=your_reddit_password
-REDDIT_USER_AGENT="idea-searcher:v1.0 (by /u/your_username)"
+Go to [Gemini API](https://console.cloud.google.com/apis/credentials) and create a new API key.
 
-# Application settings
-SUBREDDITS=golang,programming,startups,SideProject
-POSTS_CUTOFF=168h  # 7 days
-READ_INTERVAL=30m  # 30 minutes
-```
+</details>
 
-### Database Setup
+### Filling the config
 
-This project uses PostgreSQL for data storage. The database configuration is managed through Docker Compose.
+Create a `.env.docker` file in the root of the project and fill it with your data.
 
-#### Prerequisites
+Template:
 
-- Docker and Docker Compose installed on your system
+```env
+POSTGRES_CONN_STRING=postgres://scout:super_secret_password@postgres:5432/scout
 
-#### Starting the Database
+GEMINI_API_KEY="<your-gemini-api-key>"
 
-```bash
-# Start the PostgreSQL database
-docker-compose up -d
+REDDIT_CLIENT_ID="<your-reddit-client-id> or omit to use anonymous mode"
+REDDIT_CLIENT_SECRET="<your-reddit-client-secret> or omit to use anonymous mode"
+REDDIT_USERNAME="<your-reddit-username> or omit to use anonymous mode"
+REDDIT_PASSWORD="<your-reddit-password> or omit to use anonymous mode"
+REDDIT_USER_AGENT="<your-reddit-user-agent, e.g. scout/1.0> or omit to use anonymous mode"
 ```
 
-This will start a PostgreSQL server with the following configuration:
-- Database: idea_searcher
-- User: idea_searcher
-- Password: handy_idea_searcher_thingy
-- Port: 9356 (mapped to the standard PostgreSQL port 5432 inside the container)
+### Launch
 
-The database migrations will be automatically applied on container startup, as they are mounted in the Docker entrypoint initialization directory.
+Run `docker compose up` in the root of the project.
 
-#### Connecting to the Database
+## Architecture
 
-```bash
-# Using psql from your host machine
-psql -h localhost -p 9356 -U idea_searcher -d idea_searcher
+Scout consists of the following components:
 
-# Using psql from inside the container
-docker exec -it idea-searcher-db psql -U idea_searcher -d idea_searcher
-```
+- `postgres` - PostgreSQL database for storing posts, analysis results and metadata
+- `reddit provider` - Service for interacting with Reddit API (scrapes posts from subreddits, enriches them and schedules them for analysis)
+- `analysis tasks queue` - Postgres-based queue for asynchronous processing of posts
+- `analyzer` - Service that runs analysis of posts and saves results to the database
+- `api` - HTTP API for interacting with `analyzer` and `reddit-provider`
+- `ui` - Frontend application
 
-#### Stopping the Database
+<img src="./assets/scout.drawio.png" alt="scout-architecture"/>
 
-```bash
-# Stop the services
-docker-compose down
 
-# To remove the persistent volume as well
-docker-compose down -v
-```
 
-## Database Schema
+## License
 
-For detailed information about the database schema and migrations, please refer to [migrations/README.md](migrations/README.md).
-
-## Running Tests
-
-To run tests with real Reddit API requests:
-
-```bash
-# Setup environment variables for tests
-export REDDIT_CLIENT_ID=your_reddit_client_id
-export REDDIT_CLIENT_SECRET=your_reddit_client_secret
-export REDDIT_USERNAME=your_reddit_username
-export REDDIT_PASSWORD=your_reddit_password
-export REDDIT_USER_AGENT="idea-searcher:v1.0 (by /u/your_username)"
-
-# Run all tests
-go test ./tests/...
-
-# Run just the Reddit client tests
-go test ./tests/reddit -run TestClientSuite
-
-# Run just the Reddit reader tests
-go test ./tests/reddit -run TestReaderSuite
-
-# Skip long-running tests
-go test ./tests/... -short
-```
-
-## Building and Running
-
-```bash
-# Build the application
-go build -o idea-searcher ./cmd
-
-# Run the application
-./idea-searcher
-```
-
-## Project Structure
-
-- `cmd/`: Application entry point
-- `internal/`:
-  - `config/`: Configuration loading
-  - `models/`: Data models
-  - `repo/`: Data repositories (Reddit, OpenAI, PostgreSQL)
-  - `services/`: Business logic
-  - `transport/`: Data ingestion from external sources
-- `tests/`: Integration tests
+MIT
