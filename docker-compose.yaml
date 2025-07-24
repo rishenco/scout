@@ -36,6 +36,8 @@ services:
     build:
       context: .
       dockerfile: ./Dockerfile
+    volumes:
+      - ./settings.yaml:/app/settings.yaml
     depends_on:
       postgres:
         condition: service_healthy
@@ -50,7 +52,7 @@ services:
       context: .
       dockerfile: ./Dockerfile.ui
     ports:
-      - "3000:80"
+      - "5602:80"
     restart: unless-stopped
 
 volumes:

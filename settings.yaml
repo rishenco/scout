@@ -1,8 +1,7 @@
 # Scout uses Gemini API to analyze posts.
 google:
   model: "gemini-2.5-flash" # Model name
-  # model: "gemini-2.0-flash" # Model name
-  temperature: 0.25 # Temperature for the model
+  temperature: 0.85 # Temperature for the model
 
 # Scout uses a task queue to analyze posts.
 # Task processor claims those tasks and passes them to Scout service.
@@ -28,8 +27,8 @@ reddit:
   # Reddit API allows to load only up to 1000 latest posts from a subreddit.
   scraper:
     timeout: 1s # Timeout before making the next reddit API call
-    error_timeout: 3s # Timeout before making the next reddit API call after an error
-    timeout_after_full_scan: 1m # Timeout after scanning all available posts from a subreddit
+    error_timeout: 20s # Timeout before making the next reddit API call after an error
+    timeout_after_full_scan: 5m # Timeout after scanning all available posts from a subreddit
     at_least_one_exhausting_scan: false
     disabled: false # Disable the scraper
   
@@ -40,7 +39,7 @@ reddit:
     workers: 5 # Number of parallel workers processing posts at each iteration
     retries: 3 # Number of retries for a post if it fails to be downloaded
     timeout: 1s # Timeout before moving to the next iteration
-    error_timeout: 3s # Timeout before moving to the next iteration after an error
+    error_timeout: 30s # Timeout before moving to the next iteration after an error
     disabled: false # Disable the enricher
   
   # Scheduler is responsible for creating Scout Analysis Tasks for analysis.
@@ -49,5 +48,5 @@ reddit:
     batch_size: 100 # How many posts scheduler schedules for analysis per iteration
     min_score: 10 # Minimum score of a post to be scheduled for analysis
     timeout: 1s # Timeout before moving to the next iteration
-    error_timeout: 3s # Timeout before moving to the next iteration after an error
+    error_timeout: 20s # Timeout before moving to the next iteration after an error
     disabled: false # Disable the scheduler

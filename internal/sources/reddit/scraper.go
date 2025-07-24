@@ -2,7 +2,6 @@ package reddit
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -104,7 +103,8 @@ func (s *Scraper) scrape(ctx context.Context, paginator *paginator) error {
 	}
 
 	if subreddit == "" {
-		return errors.New("no subreddit to scrape")
+		// s.logger.Info().Msg("no subreddit to scrape")
+		return nil
 	}
 
 	// loading the next page of the subreddit

@@ -122,9 +122,11 @@ func (s *Scout) ScheduleAnalysis(ctx context.Context, tasks []models.AnalysisTas
 		return fmt.Errorf("add tasks: %w", err)
 	}
 
-	s.logger.Info().
-		Int("tasks_count", len(tasks)).
-		Msg("scheduled tasks")
+	if len(tasks) > 0 {
+		s.logger.Info().
+			Int("tasks_count", len(tasks)).
+			Msg("scheduled tasks")
+	}
 
 	return nil
 }

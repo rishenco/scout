@@ -26,7 +26,7 @@ Reddit API credentials are optional, you can use anonymous mode but it will have
 <details>
 <summary>Reddit API credentials</summary>
 
-1. Go to [Reddit Developer](https://www.reddit.com/prefs/apps/) and create a new app.
+1. Go to <a href="https://www.reddit.com/prefs/apps/" target="_blank">Reddit Developer</a> and create a new app.
 2. Fill in the form:
    - Name: `scout`
    - Type: `script`
@@ -37,7 +37,9 @@ Reddit API credentials are optional, you can use anonymous mode but it will have
 <details>
 <summary>Gemini API credentials</summary>
 
-Go to [Gemini API](https://console.cloud.google.com/apis/credentials) and create a new API key.
+If you don't have a Gemini Key create it <a href="https://aistudio.google.com/apikey" target="_blank">here</a>.
+
+Otherwise, you can find your key <a href="https://console.cloud.google.com/apis/credentials" target="_blank">here</a>.
 
 </details>
 
@@ -59,9 +61,23 @@ REDDIT_PASSWORD="<your-reddit-password> or omit to use anonymous mode"
 REDDIT_USER_AGENT="<your-reddit-user-agent, e.g. scout/1.0> or omit to use anonymous mode"
 ```
 
+### Change settings for your use case
+
+If want to use another model or scraping settings, you can do it in [settings.yaml](./settings.yaml)
+
 ### Launch
 
 Run `docker compose up` in the root of the project.
+
+Open UI at <a href="http://localhost:5602" target="_blank">localhost:5602</a>.
+
+## Testing Profiles
+
+You can add tests to your profiles to ensure that relevancy prompts work correctly!
+
+<p align="center">
+  <img src="./assets/scout-profile-editor.png" alt="scout-profile-editor"/>
+</p>
 
 ## Architecture
 
